@@ -21,7 +21,7 @@ type locationDTO struct {
 
 // handleLocations returns the country list a client renders on the map.
 func (s *Server) handleLocations(w http.ResponseWriter, r *http.Request) {
-	locs, err := s.locations.ListLocations(r.Context())
+	locs, err := s.store.ListLocations(r.Context())
 	if err != nil {
 		s.log.Error("list locations", "err", err)
 		writeError(w, http.StatusInternalServerError, "could not list locations")

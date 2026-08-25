@@ -48,9 +48,20 @@ func run(log *slog.Logger) error {
 		}
 	}
 
+	// Background context for long-running workers; canceled on shutdown.
+	bgCtx, bgCancel := context.WithCancel(context.Background())
+	defer bgCancel()
+	go runReaper(bgCtx, st, cfg.ReaperInterval, cfg.HeartbeatTTL, log)
+
+	apiSrv := api.NewServer(st, api.ServerConfig{
+		EnrollmentSecret: cfg.EnrollmentSecret,
+		AdminToken:       cfg.AdminToken,
+		HeartbeatTTL:     cfg.HeartbeatTTL,
+	}, log)
+
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           api.NewServer(st, log).Handler(),
+		Handler:           apiSrv.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -71,8 +82,33 @@ func run(log *slog.Logger) error {
 		return err
 	case <-stop:
 		log.Info("shutting down")
+		bgCancel()
 		shutCtx, shutCancel := context.WithTimeout(context.Background(), cfg.ShutdownGrace)
 		defer shutCancel()
 		return srv.Shutdown(shutCtx)
+	}
+}
+
+// runReaper periodically flips gateways whose heartbeat has expired to
+// unhealthy, so a dead node leaves the selection pool without operator action.
+func runReaper(ctx context.Context, st *store.Store, interval, ttl time.Duration, log *slog.Logger) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			n, err := st.MarkStaleUnhealthy(ctx, ttl)
+			if err != nil {
+				if ctx.Err() == nil {
+					log.Error("reaper", "err", err)
+				}
+				continue
+			}
+			if n > 0 {
+				log.Info("reaper marked gateways offline", "count", n, "ttl", ttl.String())
+			}
+		}
 	}
 }

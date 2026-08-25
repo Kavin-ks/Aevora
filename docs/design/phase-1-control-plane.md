@@ -45,8 +45,10 @@ Key invariants:
 | `GET /v1/locations` | user | Countries + availability (healthy server count) | ✅ 1a |
 | `POST /v1/enroll` | invite | Create user + first device | 1b |
 | `POST /v1/devices` | user | Register a device public key | 1b |
-| `POST /v1/gateways/register` | enrollment secret | Agent registers a gateway, gets a node token | 1c |
-| `POST /v1/gateways/heartbeat` | node token | Agent reports load/health | 1c |
+| `POST /v1/gateways/register` | enrollment secret | Agent registers a gateway, gets a node token | ✅ 1c |
+| `POST /v1/gateways/heartbeat` | node token | Agent reports load/health, marks healthy | ✅ 1c |
+| `POST /v1/gateways/deregister` | node token | Clean shutdown: mark gateway disabled | ✅ 1c |
+| `GET /v1/gateways` | admin token | Fleet listing with online/offline + load | ✅ 1c |
 | `POST /v1/connections` | user+device | Select gateway → lease /32 → program peer → return config | 1d |
 | `DELETE /v1/connections/{id}` | user+device | Tear down: release lease, remove peer | 1d |
 | `POST /v1/connections/{id}/stats` | user+device | Client posts throughput/latency samples | 1d |
@@ -64,8 +66,15 @@ stale-heartbeat gateways are excluded outright.
   embedded migrator, store layer, `GET /healthz` + `GET /v1/locations`,
   docker-compose dev stack, unit tests (handlers + selection) that need no DB.
 - **1b — identity:** invite enrollment, users, device registration, JWT.
-- **1c — fleet:** gateway register + heartbeat; health TTL; selection reads real
-  metrics.
+- **1c — fleet (done):** gateway self-registration (issues a hashed node token),
+  metadata (country/city/region/endpoint/capacity + geo &amp; bandwidth hints for
+  future selection), heartbeat, health status, a reaper enforcing the heartbeat
+  TTL (online/offline), admin fleet listing, deregistration, multiple gateways
+  per country (new countries created implicitly on register), and
+  `SelectableGateways` — the healthy-in-location candidate query feeding the
+  pure `selection` policy. Registration/admin are disabled unless their secrets
+  are configured. Verified against Postgres 15 (migrations, seed, full
+  register→heartbeat→reaper→deregister flow); unit tests are DB-free.
 - **1d — connections:** the connect/lease/peer lifecycle + the node agent that
   applies peers via `wgctrl`, wired to the Phase 0 gateway.
 

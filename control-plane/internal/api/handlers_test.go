@@ -13,39 +13,72 @@ import (
 	"github.com/aevora/control-plane/internal/model"
 )
 
-// fakeLocations implements LocationLister without a database.
-type fakeLocations struct {
-	locs []model.Location
-	err  error
+// fakeStore implements api.Store without a database. Exported-ish fields let
+// tests seed return values and inspect what handlers passed down.
+type fakeStore struct {
+	locs   []model.Location
+	locErr error
+
+	registerGW    model.Gateway
+	registerToken string
+	registerErr   error
+	lastReg       model.GatewayRegistration
+
+	heartbeatGW   model.Gateway
+	heartbeatErr  error
+	lastHBHash    string
+	lastHBMetrics model.GatewayMetrics
+
+	deregErr    error
+	lastDeregHT string
+
+	gateways []model.Gateway
+	listErr  error
 }
 
-func (f fakeLocations) ListLocations(context.Context) ([]model.Location, error) {
-	return f.locs, f.err
+func (f *fakeStore) ListLocations(context.Context) ([]model.Location, error) {
+	return f.locs, f.locErr
+}
+func (f *fakeStore) RegisterGateway(_ context.Context, r model.GatewayRegistration) (model.Gateway, string, error) {
+	f.lastReg = r
+	return f.registerGW, f.registerToken, f.registerErr
+}
+func (f *fakeStore) Heartbeat(_ context.Context, tokenHash string, m model.GatewayMetrics) (model.Gateway, error) {
+	f.lastHBHash, f.lastHBMetrics = tokenHash, m
+	return f.heartbeatGW, f.heartbeatErr
+}
+func (f *fakeStore) DeregisterGateway(_ context.Context, tokenHash string) error {
+	f.lastDeregHT = tokenHash
+	return f.deregErr
+}
+func (f *fakeStore) ListGateways(context.Context) ([]model.Gateway, error) {
+	return f.gateways, f.listErr
 }
 
-func newTestServer(fl fakeLocations) http.Handler {
-	return NewServer(fl, slog.New(slog.NewTextHandler(io.Discard, nil))).Handler()
+func testServer(fs *fakeStore, cfg ServerConfig) http.Handler {
+	return NewServer(fs, cfg, slog.New(slog.NewTextHandler(io.Discard, nil))).Handler()
 }
 
 func TestHealth(t *testing.T) {
 	rr := httptest.NewRecorder()
-	newTestServer(fakeLocations{}).ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	testServer(&fakeStore{}, ServerConfig{}).
+		ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rr.Code)
 	}
 }
 
 func TestLocations_FlattensAvailability(t *testing.T) {
-	fl := fakeLocations{locs: []model.Location{
+	fs := &fakeStore{locs: []model.Location{
 		{Code: "de", CountryName: "Germany", ServerCount: 2, HealthyCount: 2},
-		{Code: "us", CountryName: "United States", ServerCount: 1, HealthyCount: 0}, // unavailable
+		{Code: "us", CountryName: "United States", ServerCount: 1, HealthyCount: 0},
 	}}
 	rr := httptest.NewRecorder()
-	newTestServer(fl).ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/locations", nil))
+	testServer(fs, ServerConfig{}).
+		ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/locations", nil))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rr.Code)
 	}
-
 	var body struct {
 		Locations []locationDTO `json:"locations"`
 	}
@@ -56,16 +89,16 @@ func TestLocations_FlattensAvailability(t *testing.T) {
 		t.Fatalf("got %d locations, want 2", len(body.Locations))
 	}
 	if !body.Locations[0].Available {
-		t.Errorf("Germany should be available")
+		t.Error("Germany should be available")
 	}
 	if body.Locations[1].Available {
-		t.Errorf("United States should be unavailable (no healthy gateway)")
+		t.Error("United States should be unavailable (no healthy gateway)")
 	}
 }
 
 func TestLocations_StoreErrorIs500(t *testing.T) {
 	rr := httptest.NewRecorder()
-	newTestServer(fakeLocations{err: errors.New("db down")}).
+	testServer(&fakeStore{locErr: errors.New("db down")}, ServerConfig{}).
 		ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/locations", nil))
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500", rr.Code)
