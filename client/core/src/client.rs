@@ -11,7 +11,7 @@ use crate::keys::{self, KeyPair};
 use crate::model::{ConnectRequest, DeviceRegistration, EnrollRequest, Location, Server, StatsReport};
 use crate::state::ConnectionState;
 use crate::transport::Transport;
-use crate::tunnel::{self, TunnelProvider};
+use crate::tunnel::{self, TunnelConfig, TunnelProvider};
 
 /// Session state the platform persists (private key in the OS keystore, refresh
 /// token in secure storage) and restores on next launch.
@@ -125,9 +125,13 @@ impl VpnClient {
         self.authed(|access| self.api.locations(access))
     }
 
-    /// Connects to a country: selects a gateway, leases an address, and brings
-    /// the native tunnel up. Returns a summary for the UI.
-    pub fn connect(&self, country_code: &str) -> Result<ConnectionSummary> {
+    /// Selects a gateway and leases an address, returning the summary and the
+    /// `TunnelConfig` the native layer must use to bring up the OS tunnel. State
+    /// moves to `Connecting`; the platform calls [`mark_connected`] once the
+    /// native tunnel is actually up, or [`mark_failed`] / [`disconnect`] on
+    /// failure. This is the entry point the Apple/Android/Windows apps use: the
+    /// core never touches the OS network stack.
+    pub fn prepare_connection(&self, country_code: &str) -> Result<(ConnectionSummary, TunnelConfig)> {
         let (device_id, keypair) = {
             let inner = self.inner.lock().unwrap();
             if !inner.state.can_transition_to(&ConnectionState::Connecting) {
@@ -151,11 +155,6 @@ impl VpnClient {
         };
 
         let config = tunnel::build_config(&keypair, &conn);
-        if let Err(e) = self.provider.up(&config) {
-            self.fail(&e);
-            return Err(e);
-        }
-
         let summary = ConnectionSummary {
             connection_id: conn.connection_id.clone(),
             server_name: conn.server.name.clone(),
@@ -167,10 +166,37 @@ impl VpnClient {
         };
         {
             let mut inner = self.inner.lock().unwrap();
-            inner.state = ConnectionState::Connected;
             inner.active_connection_id = Some(conn.connection_id);
             inner.current_server = Some(conn.server);
         }
+        Ok((summary, config))
+    }
+
+    /// Marks the tunnel fully established (called by the platform once its native
+    /// VPN provider reports the tunnel is up).
+    pub fn mark_connected(&self) {
+        let mut inner = self.inner.lock().unwrap();
+        if inner.state.can_transition_to(&ConnectionState::Connected) {
+            inner.state = ConnectionState::Connected;
+        }
+    }
+
+    /// Marks the connection failed (called by the platform if the native tunnel
+    /// could not be established or terminated unexpectedly).
+    pub fn mark_failed(&self, reason: &str) {
+        self.inner.lock().unwrap().state = ConnectionState::Failed(reason.to_string());
+    }
+
+    /// Convenience for callers that own a [`TunnelProvider`] (Rust tests, and
+    /// platforms wiring the provider through FFI): prepare, bring the provider
+    /// up, and mark connected in one call.
+    pub fn connect(&self, country_code: &str) -> Result<ConnectionSummary> {
+        let (summary, config) = self.prepare_connection(country_code)?;
+        if let Err(e) = self.provider.up(&config) {
+            self.fail(&e);
+            return Err(e);
+        }
+        self.mark_connected();
         Ok(summary)
     }
 
@@ -334,6 +360,29 @@ mod tests {
 
         let log = calls.lock().unwrap().clone();
         assert_eq!(log, vec!["up:203.0.113.9:51820".to_string(), "down".to_string()]);
+    }
+
+    #[test]
+    fn prepare_connection_returns_config_and_defers_connected() {
+        let client = VpnClient::new("http://cp", Box::new(scripted()), Box::new(FakeProvider::default()));
+        client.enroll("inv", "a@b.co", None, "l", "macos").unwrap();
+
+        let (summary, config) = client.prepare_connection("de").unwrap();
+        assert_eq!(summary.assigned_ip, "10.7.1.5/32");
+        // The native layer receives a full WireGuard config.
+        assert_eq!(config.peer_public_key, "GWPUB=");
+        assert_eq!(config.endpoint, "203.0.113.9:51820");
+        assert_eq!(config.addresses, vec!["10.7.1.5/32"]);
+        assert!(!config.private_key.is_empty());
+        // State is Connecting until the platform confirms the tunnel is up.
+        assert_eq!(client.state(), ConnectionState::Connecting);
+
+        client.mark_connected();
+        assert_eq!(client.state(), ConnectionState::Connected);
+
+        // And disconnect still releases the lease recorded during prepare.
+        client.disconnect().unwrap();
+        assert_eq!(client.state(), ConnectionState::Disconnected);
     }
 
     #[test]

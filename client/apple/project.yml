@@ -1,0 +1,68 @@
+# XcodeGen spec for the Aevora macOS app + packet-tunnel extension.
+# Generate the project with:  xcodegen generate   (brew install xcodegen)
+# Prerequisite:               ./build-core.sh      (produces build/AevoraCore.xcframework + bindings)
+#
+# Set your Team ID and control-plane URL below (or via an untracked .xcconfig);
+# do not commit real signing identities.
+
+name: Aevora
+options:
+  bundleIdPrefix: com.aevora
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    # Fill these in locally (or via an untracked xcconfig). Left blank on purpose.
+    DEVELOPMENT_TEAM: ""            # your 10-char Apple Team ID
+    AEVORA_CONTROL_URL: ""         # e.g. https://staging.control.example.com
+    SWIFT_VERSION: "5.9"
+    CODE_SIGN_STYLE: Automatic
+
+packages:
+  # Official WireGuard for Apple platforms. WireGuardKit builds wireguard-go,
+  # so a Go toolchain must be installed to compile the extension.
+  WireGuardKit:
+    url: https://github.com/WireGuard/wireguard-apple.git
+    branch: master
+
+targets:
+  Aevora:
+    type: application
+    platform: macOS
+    sources:
+      - path: Aevora
+      - path: Shared
+      - path: build/Generated       # aevora_core.swift (from build-core.sh)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.aevora.Aevora
+        INFOPLIST_FILE: Aevora/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Aevora/Aevora.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+    dependencies:
+      - framework: build/AevoraCore.xcframework
+        embed: false
+      - target: PacketTunnel
+    scheme:
+      testTargets: []
+
+  PacketTunnel:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: PacketTunnel
+      - path: Shared
+      - path: build/Generated
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.aevora.Aevora.PacketTunnel
+        INFOPLIST_FILE: PacketTunnel/Info.plist
+        CODE_SIGN_ENTITLEMENTS: PacketTunnel/PacketTunnel.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+    dependencies:
+      - framework: build/AevoraCore.xcframework
+        embed: false
+      - package: WireGuardKit
+        product: WireGuardKit

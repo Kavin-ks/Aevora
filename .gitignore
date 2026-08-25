@@ -54,7 +54,18 @@ target/
 **/target/
 node_modules/
 dist/
-bin/
+
+# --- Client build outputs & generated bindings (regenerate with build-core.sh) ---
+client/apple/build/
+*.xcframework
+*.xcodeproj/
+*.xcworkspace/
+**/xcuserdata/
+client/android/app/src/main/jniLibs/
+client/android/app/src/main/java/uniffi/
+.gradle/
+**/build/
+client/android/local.properties
 control-plane/aevora-controld
 agent/aevora-agent
 *.test

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Required to install a packet-tunnel VPN configuration. Requires the
+         "Network Extensions" capability on the App ID (Apple Developer account). -->
+    <key>com.apple.developer.networking.networkextension</key>
+    <array>
+        <string>packet-tunnel-provider</string>
+    </array>
+
+    <!-- Shared with the extension for cross-process coordination. -->
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.com.aevora.Aevora</string>
+    </array>
+
+    <!-- Shared keychain group so the extension can resolve the WireGuard config
+         persistent reference the app stored. Uses the Team ID prefix. -->
+    <key>keychain-access-groups</key>
+    <array>
+        <string>$(AppIdentifierPrefix)com.aevora.Aevora</string>
+    </array>
+
+    <!-- macOS sandbox: allow outbound (control plane) and the VPN. -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+</dict>
+</plist>

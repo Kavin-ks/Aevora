@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Control-plane URL comes from the AEVORA_CONTROL_URL build setting, so no
+         endpoint is hardcoded in source. Set it per configuration (Debug/Release). -->
+    <key>AEVORA_CONTROL_URL</key>
+    <string>$(AEVORA_CONTROL_URL)</string>
+</dict>
+</plist>

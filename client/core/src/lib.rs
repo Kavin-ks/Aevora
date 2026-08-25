@@ -26,3 +26,9 @@ pub use tunnel::{TunnelConfig, TunnelProvider, TunnelStats};
 
 #[cfg(feature = "net")]
 pub use transport::UreqTransport;
+
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[cfg(feature = "ffi")]
+uniffi::setup_scaffolding!();

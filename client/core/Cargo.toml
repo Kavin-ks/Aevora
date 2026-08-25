@@ -14,12 +14,18 @@ crate-type = ["lib", "cdylib", "staticlib"]
 name = "smoke"
 required-features = ["net"]
 
+# uniffi-bindgen CLI, used to generate the Swift/Kotlin bindings.
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["ffi"]
+
 [features]
 default = []
 # `net` adds the real (ureq) HTTP transport; tests use a fake transport instead.
 net = ["dep:ureq"]
-# `ffi` adds UniFFI bindings (Swift/Kotlin) for the platform apps.
-ffi = ["dep:uniffi"]
+# `ffi` adds UniFFI bindings (Swift/Kotlin) and the built-in HTTP transport.
+ffi = ["dep:uniffi", "net"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -29,4 +35,4 @@ thiserror = "1"
 rand = "0.8"
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 ureq = { version = "2", features = ["json"], optional = true }
-uniffi = { version = "0.28", optional = true }
+uniffi = { version = "0.28", features = ["cli"], optional = true }
