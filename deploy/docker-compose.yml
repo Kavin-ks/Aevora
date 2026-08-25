@@ -1,0 +1,36 @@
+# Aevora local dev stack: Postgres + control-plane API.
+#   cd deploy && docker compose up --build
+#   curl localhost:8080/healthz
+#   curl localhost:8080/v1/locations
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aevora
+      POSTGRES_PASSWORD: aevora
+      POSTGRES_DB: aevora
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aevora"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  controld:
+    build:
+      context: ../control-plane
+    environment:
+      AEVORA_LISTEN_ADDR: ":8080"
+      AEVORA_DB_URL: "postgres://aevora:aevora@postgres:5432/aevora?sslmode=disable"
+      AEVORA_DEV_SEED: "1"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
