@@ -1,0 +1,61 @@
+# =============================================================================
+# Secrets & private material — NEVER commit. (Belt-and-suspenders: specific
+# paths first, then broad type patterns, then explicit *.example allow-list.)
+# =============================================================================
+# Gateway runtime state & per-client configs
+infra/gateway/config.env
+infra/gateway/.gateway-state
+infra/gateway/clients/
+**/.gateway-state
+**/config.env
+
+# Env files (allow *.example)
+.env
+*.env
+.env.*
+!*.env.example
+!.env.example
+
+# WireGuard / VPN configs & keys
+**/*.conf
+wg*.conf
+**/*.key
+**/*.pub
+*.psk
+
+# Generic private keys / certs / keystores
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_ed25519
+*.mobileprovision
+
+# Cloud / IaC state & secret vars (for later phases)
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!*.tfvars.example
+secrets/
+*.secret
+
+# Allow-list: templates and examples are safe to commit
+!**/*.example
+!**/*.conf.example
+
+# =============================================================================
+# Build / tooling artifacts
+# =============================================================================
+/target/
+node_modules/
+dist/
+bin/
+control-plane/aevora-controld
+agent/aevora-agent
+*.test
+*.out
+*.log
+.DS_Store
