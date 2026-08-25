@@ -1,0 +1,32 @@
+[package]
+name = "aevora-core"
+version = "0.1.0"
+edition = "2021"
+description = "Shared client core for the Aevora VPN — API client, key generation, connection state machine, and tunnel-config assembly, used by every platform (macOS, Windows, Android, iOS)."
+license = "MIT"
+
+[lib]
+# lib for tests; cdylib/staticlib so the mobile/desktop apps can link the FFI.
+crate-type = ["lib", "cdylib", "staticlib"]
+
+# The live smoke test uses the real HTTP transport, so it only builds with `net`.
+[[example]]
+name = "smoke"
+required-features = ["net"]
+
+[features]
+default = []
+# `net` adds the real (ureq) HTTP transport; tests use a fake transport instead.
+net = ["dep:ureq"]
+# `ffi` adds UniFFI bindings (Swift/Kotlin) for the platform apps.
+ffi = ["dep:uniffi"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+thiserror = "1"
+rand = "0.8"
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+ureq = { version = "2", features = ["json"], optional = true }
+uniffi = { version = "0.28", optional = true }
