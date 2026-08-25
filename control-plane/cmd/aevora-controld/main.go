@@ -60,6 +60,8 @@ func run(log *slog.Logger) error {
 		JWTSecret:        cfg.JWTSecret,
 		AccessTTL:        cfg.AccessTTL,
 		RefreshTTL:       cfg.RefreshTTL,
+		LeaseTTL:         cfg.LeaseTTL,
+		ClientDNS:        cfg.ClientDNS,
 	}, log)
 
 	srv := &http.Server{
@@ -102,15 +104,19 @@ func runReaper(ctx context.Context, st *store.Store, interval, ttl time.Duration
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			n, err := st.MarkStaleUnhealthy(ctx, ttl)
-			if err != nil {
+			if n, err := st.MarkStaleUnhealthy(ctx, ttl); err != nil {
 				if ctx.Err() == nil {
-					log.Error("reaper", "err", err)
+					log.Error("reaper: gateways", "err", err)
 				}
-				continue
-			}
-			if n > 0 {
+			} else if n > 0 {
 				log.Info("reaper marked gateways offline", "count", n, "ttl", ttl.String())
+			}
+			if n, err := st.ExpireStaleLeases(ctx); err != nil {
+				if ctx.Err() == nil {
+					log.Error("reaper: leases", "err", err)
+				}
+			} else if n > 0 {
+				log.Info("reaper expired stale leases", "count", n)
 			}
 		}
 	}

@@ -4,6 +4,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -24,8 +25,15 @@ type Config struct {
 
 	// AccessTTL: lifetime of a user access JWT. RefreshTTL: lifetime of a
 	// refresh token used to mint new access tokens without re-enrolling.
-	AccessTTL     time.Duration // AEVORA_ACCESS_TTL  (default 15m)
-	RefreshTTL    time.Duration // AEVORA_REFRESH_TTL (default 720h = 30d)
+	AccessTTL  time.Duration // AEVORA_ACCESS_TTL  (default 15m)
+	RefreshTTL time.Duration // AEVORA_REFRESH_TTL (default 720h = 30d)
+
+	// LeaseTTL: how long a connection lease is valid before it must be renewed
+	// (via the stats keep-alive); an unrenewed lease is reaped and its peer
+	// removed. ClientDNS: resolver(s) pushed to connected clients.
+	LeaseTTL  time.Duration // AEVORA_LEASE_TTL  (default 5m)
+	ClientDNS []string      // AEVORA_CLIENT_DNS (default 9.9.9.9,149.112.112.112)
+
 	ShutdownGrace time.Duration
 }
 
@@ -42,8 +50,28 @@ func FromEnv() Config {
 		ReaperInterval:   getdur("AEVORA_REAPER_INTERVAL", 10*time.Second),
 		AccessTTL:        getdur("AEVORA_ACCESS_TTL", 15*time.Minute),
 		RefreshTTL:       getdur("AEVORA_REFRESH_TTL", 720*time.Hour),
+		LeaseTTL:         getdur("AEVORA_LEASE_TTL", 5*time.Minute),
+		ClientDNS:        getcsv("AEVORA_CLIENT_DNS", []string{"9.9.9.9", "149.112.112.112"}),
 		ShutdownGrace:    10 * time.Second,
 	}
+}
+
+func getcsv(key string, def []string) []string {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return def
+	}
+	parts := strings.Split(v, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return def
+	}
+	return out
 }
 
 func getdur(key string, def time.Duration) time.Duration {

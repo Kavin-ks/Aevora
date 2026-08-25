@@ -34,10 +34,12 @@ Aevora/
       └─ validate.sh        Check the network model is correct
 ```
 
-Later phases add `control-plane/` (Go API), `agent/` (gateway node agent), and
-`client/` — a **shared Rust core** (via UniFFI) with **native tunnel providers
-and UI** per OS, targeting **macOS, Windows, Android and iOS** as first-class
-platforms. See [ADR 0001](docs/decisions/0001-architecture-baseline.md).
+`control-plane/` (Go API + Postgres) and `agent/` (the gateway node agent) are
+built out through Phase 1. A later phase adds `client/` — a **shared Rust core**
+(via UniFFI) with **native tunnel providers and UI** per OS, targeting **macOS,
+Windows, Android and iOS** as first-class platforms. See
+[ADR 0001](docs/decisions/0001-architecture-baseline.md) and the
+[Phase 1 design](docs/design/phase-1-control-plane.md).
 
 ## Phase 0 — run it
 

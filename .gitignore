@@ -22,6 +22,7 @@ wg*.conf
 **/*.key
 **/*.pub
 *.psk
+*.token
 
 # Generic private keys / certs / keystores
 *.pem

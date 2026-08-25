@@ -61,6 +61,40 @@ type fakeStore struct {
 
 	inviteErr      error
 	lastInviteCode string
+
+	// connections
+	connResult      model.Connection
+	connErr         error
+	lastConnUser    string
+	lastConnDevice  string
+	lastConnCountry string
+
+	releaseErr       error
+	lastReleaseUser  string
+	lastReleaseLease string
+
+	renewExpiry time.Time
+	renewErr    error
+
+	peers         []model.Peer
+	peersErr      error
+	lastPeersHash string
+}
+
+func (f *fakeStore) CreateConnection(_ context.Context, userID, deviceID, country string, _, _ time.Duration) (model.Connection, error) {
+	f.lastConnUser, f.lastConnDevice, f.lastConnCountry = userID, deviceID, country
+	return f.connResult, f.connErr
+}
+func (f *fakeStore) ReleaseConnection(_ context.Context, userID, leaseID string) error {
+	f.lastReleaseUser, f.lastReleaseLease = userID, leaseID
+	return f.releaseErr
+}
+func (f *fakeStore) RenewConnection(_ context.Context, _, _ string, _ time.Duration) (time.Time, error) {
+	return f.renewExpiry, f.renewErr
+}
+func (f *fakeStore) GatewayPeers(_ context.Context, tokenHash string) ([]model.Peer, error) {
+	f.lastPeersHash = tokenHash
+	return f.peers, f.peersErr
 }
 
 func (f *fakeStore) Enroll(_ context.Context, r model.EnrollRequest, _ time.Duration) (model.User, model.Device, string, error) {

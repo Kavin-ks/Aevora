@@ -53,9 +53,10 @@ Key invariants:
 | `POST /v1/gateways/heartbeat` | node token | Agent reports load/health, marks healthy | ✅ 1c |
 | `POST /v1/gateways/deregister` | node token | Clean shutdown: mark gateway disabled | ✅ 1c |
 | `GET /v1/gateways` | admin token | Fleet listing with online/offline + load | ✅ 1c |
-| `POST /v1/connections` | user+device | Select gateway → lease /32 → program peer → return config | 1d |
-| `DELETE /v1/connections/{id}` | user+device | Tear down: release lease, remove peer | 1d |
-| `POST /v1/connections/{id}/stats` | user+device | Client posts throughput/latency samples | 1d |
+| `POST /v1/connections` | user | Select gateway → lease /32 → return tunnel config | ✅ 1d |
+| `DELETE /v1/connections/{id}` | user | Disconnect: release the lease | ✅ 1d |
+| `POST /v1/connections/{id}/stats` | user | Client stats + lease keep-alive (renew) | ✅ 1d |
+| `GET /v1/gateways/peers` | node token | Agent fetches its desired peer set to reconcile | ✅ 1d |
 
 ## Server selection (increment 1d)
 
@@ -86,8 +87,28 @@ stale-heartbeat gateways are excluded outright.
   pure `selection` policy. Registration/admin are disabled unless their secrets
   are configured. Verified against Postgres 15 (migrations, seed, full
   register→heartbeat→reaper→deregister flow); unit tests are DB-free.
-- **1d — connections:** the connect/lease/peer lifecycle + the node agent that
-  applies peers via `wgctrl`, wired to the Phase 0 gateway.
+- **1d — connections (done):** `POST /v1/connections` selects the least-loaded
+  healthy gateway in the country (load = active lease count), leases a free
+  `/32`+`/128` under a per-gateway row lock (no double-allocation), and returns
+  the tunnel config (server endpoint/public key, assigned IPs, DNS, full-tunnel
+  allowed-IPs). `stats` renews the lease (keep-alive); a lease reaper expires
+  stale leases so their peers are removed. The **node agent** (`agent/`, its own
+  module) self-registers, heartbeats, fetches `GET /v1/gateways/peers`, and
+  reconciles the WireGuard interface by shelling out to `wg` — a **pull model**
+  (no inbound to gateways, no agent secret stored). The reconcile diff and the
+  `wg` dump parser are pure and unit-tested; the client is tested against an
+  httptest server. Control-plane flow verified against Postgres 15 (connect →
+  peers → renew → disconnect → reaper), including two-device IP allocation and
+  the no-gateway (503) path.
+
+### Peer programming: pull/reconcile (not push)
+
+The control plane records intent (leases); the agent reconciles reality. It is
+the DB's `active` leases, exposed at `GET /v1/gateways/peers`, that the agent
+diffs against the live interface. This needs no inbound connectivity to gateways
+(NAT/firewall friendly) and stores no agent callback credentials. The trade-off
+is up to one sync interval of setup latency; WireGuard's handshake retry covers
+it, and a future long-poll/stream can cut it further.
 
 ## Local dev
 

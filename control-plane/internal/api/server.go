@@ -31,6 +31,12 @@ type Store interface {
 	RevokeDevice(ctx context.Context, userID, deviceID string) error
 	RefreshAccess(ctx context.Context, refreshPlain string) (userID, deviceID string, err error)
 	CreateInvite(ctx context.Context, code, note string, expiresAt *time.Time) error
+
+	// Connections (Phase 1d).
+	CreateConnection(ctx context.Context, userID, deviceID, country string, leaseTTL, heartbeatTTL time.Duration) (model.Connection, error)
+	ReleaseConnection(ctx context.Context, userID, leaseID string) error
+	RenewConnection(ctx context.Context, userID, leaseID string, leaseTTL time.Duration) (time.Time, error)
+	GatewayPeers(ctx context.Context, tokenHash string) ([]model.Peer, error)
 }
 
 // ServerConfig carries the auth secrets and timing the handlers need.
@@ -41,6 +47,8 @@ type ServerConfig struct {
 	JWTSecret        string        // empty => user auth (enroll/refresh/devices) disabled
 	AccessTTL        time.Duration // lifetime of an access JWT
 	RefreshTTL       time.Duration // lifetime of a refresh token
+	LeaseTTL         time.Duration // lifetime of a connection lease before renewal
+	ClientDNS        []string      // resolver(s) pushed to connected clients
 }
 
 // Server wires handlers to their dependencies.
@@ -69,10 +77,16 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /v1/devices/{id}", s.handleDeviceRevoke)
 	mux.HandleFunc("POST /v1/invites", s.handleInviteCreate)
 
+	// Connections (user-facing).
+	mux.HandleFunc("POST /v1/connections", s.handleConnectionCreate)
+	mux.HandleFunc("DELETE /v1/connections/{id}", s.handleConnectionDelete)
+	mux.HandleFunc("POST /v1/connections/{id}/stats", s.handleConnectionStats)
+
 	// Gateway fleet (agent-facing + admin).
 	mux.HandleFunc("POST /v1/gateways/register", s.handleGatewayRegister)
 	mux.HandleFunc("POST /v1/gateways/heartbeat", s.handleGatewayHeartbeat)
 	mux.HandleFunc("POST /v1/gateways/deregister", s.handleGatewayDeregister)
+	mux.HandleFunc("GET /v1/gateways/peers", s.handleGatewayPeers)
 	mux.HandleFunc("GET /v1/gateways", s.handleGatewayList)
 
 	return s.recoverer(s.logger(mux))

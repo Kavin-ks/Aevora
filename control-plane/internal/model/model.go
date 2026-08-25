@@ -138,3 +138,26 @@ type EnrollRequest struct {
 	DisplayName string             `json:"display_name"`
 	Device      DeviceRegistration `json:"device"`
 }
+
+// --- Connections (Phase 1d) -------------------------------------------------
+
+// Connection is the result of selecting a gateway and leasing an address for a
+// device. It carries everything the client needs to bring up its tunnel — but
+// never the client's private key, which the client already holds.
+type Connection struct {
+	ID               string
+	GatewayName      string
+	Country          string
+	City             string
+	Endpoint         string // host:port
+	GatewayPublicKey string
+	AssignedIPv4     string  // e.g. "10.7.50.5/32"
+	AssignedIPv6     *string // e.g. "fd07:0007:1::5/128"
+	ExpiresAt        time.Time
+}
+
+// Peer is one client entry the node agent must program on the gateway.
+type Peer struct {
+	PublicKey  string   `json:"public_key"`
+	AllowedIPs []string `json:"allowed_ips"`
+}
