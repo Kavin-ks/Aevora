@@ -43,8 +43,12 @@ Key invariants:
 |---------------|------|---------|-----------|
 | `GET /healthz` | none | Liveness/readiness | ✅ 1a |
 | `GET /v1/locations` | user | Countries + availability (healthy server count) | ✅ 1a |
-| `POST /v1/enroll` | invite | Create user + first device | 1b |
-| `POST /v1/devices` | user | Register a device public key | 1b |
+| `POST /v1/enroll` | invite | Create user + first device, return tokens | ✅ 1b |
+| `POST /v1/auth/refresh` | refresh token | Exchange for a new access token | ✅ 1b |
+| `POST /v1/devices` | user | Register another device, return its refresh token | ✅ 1b |
+| `GET /v1/devices` | user | List the caller's devices | ✅ 1b |
+| `DELETE /v1/devices/{id}` | user | Revoke a device (+ its refresh tokens) | ✅ 1b |
+| `POST /v1/invites` | admin token | Mint an invite code | ✅ 1b |
 | `POST /v1/gateways/register` | enrollment secret | Agent registers a gateway, gets a node token | ✅ 1c |
 | `POST /v1/gateways/heartbeat` | node token | Agent reports load/health, marks healthy | ✅ 1c |
 | `POST /v1/gateways/deregister` | node token | Clean shutdown: mark gateway disabled | ✅ 1c |
@@ -65,7 +69,14 @@ stale-heartbeat gateways are excluded outright.
 - **1a — foundation (this increment):** module, config, Postgres schema +
   embedded migrator, store layer, `GET /healthz` + `GET /v1/locations`,
   docker-compose dev stack, unit tests (handlers + selection) that need no DB.
-- **1b — identity:** invite enrollment, users, device registration, JWT.
+- **1b — identity (done):** invite minting (admin), invite-gated enrollment
+  (creates user + first device), short-lived **HS256 access JWT** (stdlib, no
+  dependency; `alg` pinned) plus **refresh tokens** (stored hashed) for session
+  continuity, device registration/listing/revocation (revoking a device revokes
+  its refresh tokens). All user endpoints require a valid access token; the
+  whole feature is disabled unless `AEVORA_JWT_SECRET` is set. Verified against
+  Postgres 15: enroll → refresh → add/list/revoke device, plus used-invite (403),
+  duplicate device key (409), and revoked-token (401) paths. Unit tests DB-free.
 - **1c — fleet (done):** gateway self-registration (issues a hashed node token),
   metadata (country/city/region/endpoint/capacity + geo &amp; bandwidth hints for
   future selection), heartbeat, health status, a reaper enforcing the heartbeat

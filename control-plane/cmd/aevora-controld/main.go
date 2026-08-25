@@ -57,6 +57,9 @@ func run(log *slog.Logger) error {
 		EnrollmentSecret: cfg.EnrollmentSecret,
 		AdminToken:       cfg.AdminToken,
 		HeartbeatTTL:     cfg.HeartbeatTTL,
+		JWTSecret:        cfg.JWTSecret,
+		AccessTTL:        cfg.AccessTTL,
+		RefreshTTL:       cfg.RefreshTTL,
 	}, log)
 
 	srv := &http.Server{

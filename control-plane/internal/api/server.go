@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aevora/control-plane/internal/auth"
 	"github.com/aevora/control-plane/internal/model"
 )
 
@@ -16,10 +17,20 @@ import (
 // handlers testable with a fake (see handlers_test.go).
 type Store interface {
 	ListLocations(ctx context.Context) ([]model.Location, error)
+
+	// Gateway fleet (Phase 1c).
 	RegisterGateway(ctx context.Context, r model.GatewayRegistration) (model.Gateway, string, error)
 	Heartbeat(ctx context.Context, tokenHash string, m model.GatewayMetrics) (model.Gateway, error)
 	DeregisterGateway(ctx context.Context, tokenHash string) error
 	ListGateways(ctx context.Context) ([]model.Gateway, error)
+
+	// Identity (Phase 1b).
+	Enroll(ctx context.Context, r model.EnrollRequest, refreshTTL time.Duration) (model.User, model.Device, string, error)
+	CreateDevice(ctx context.Context, userID string, r model.DeviceRegistration, refreshTTL time.Duration) (model.Device, string, error)
+	ListDevices(ctx context.Context, userID string) ([]model.Device, error)
+	RevokeDevice(ctx context.Context, userID, deviceID string) error
+	RefreshAccess(ctx context.Context, refreshPlain string) (userID, deviceID string, err error)
+	CreateInvite(ctx context.Context, code, note string, expiresAt *time.Time) error
 }
 
 // ServerConfig carries the auth secrets and timing the handlers need.
@@ -27,6 +38,9 @@ type ServerConfig struct {
 	EnrollmentSecret string        // empty => gateway registration disabled
 	AdminToken       string        // empty => admin views disabled
 	HeartbeatTTL     time.Duration // used to compute online/offline in listings
+	JWTSecret        string        // empty => user auth (enroll/refresh/devices) disabled
+	AccessTTL        time.Duration // lifetime of an access JWT
+	RefreshTTL       time.Duration // lifetime of a refresh token
 }
 
 // Server wires handlers to their dependencies.
@@ -47,6 +61,14 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 	mux.HandleFunc("GET /v1/locations", s.handleLocations)
 
+	// Identity (user-facing + admin invite minting).
+	mux.HandleFunc("POST /v1/enroll", s.handleEnroll)
+	mux.HandleFunc("POST /v1/auth/refresh", s.handleRefresh)
+	mux.HandleFunc("GET /v1/devices", s.handleDeviceList)
+	mux.HandleFunc("POST /v1/devices", s.handleDeviceCreate)
+	mux.HandleFunc("DELETE /v1/devices/{id}", s.handleDeviceRevoke)
+	mux.HandleFunc("POST /v1/invites", s.handleInviteCreate)
+
 	// Gateway fleet (agent-facing + admin).
 	mux.HandleFunc("POST /v1/gateways/register", s.handleGatewayRegister)
 	mux.HandleFunc("POST /v1/gateways/heartbeat", s.handleGatewayHeartbeat)
@@ -54,6 +76,26 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/gateways", s.handleGatewayList)
 
 	return s.recoverer(s.logger(mux))
+}
+
+// authUser authenticates the caller from a Bearer access JWT and returns the
+// user id. On failure it writes the response and returns ok=false.
+func (s *Server) authUser(w http.ResponseWriter, r *http.Request) (userID string, ok bool) {
+	if s.cfg.JWTSecret == "" {
+		writeError(w, http.StatusServiceUnavailable, "authentication is disabled")
+		return "", false
+	}
+	tok := bearerToken(r)
+	if tok == "" {
+		writeError(w, http.StatusUnauthorized, "missing access token")
+		return "", false
+	}
+	claims, err := auth.ParseJWT(s.cfg.JWTSecret, tok)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid or expired token")
+		return "", false
+	}
+	return claims.Subject, true
 }
 
 // bearerToken extracts the token from an "Authorization: Bearer <token>" header.

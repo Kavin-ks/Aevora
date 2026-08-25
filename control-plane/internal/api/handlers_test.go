@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/aevora/control-plane/internal/model"
 )
@@ -34,6 +35,55 @@ type fakeStore struct {
 
 	gateways []model.Gateway
 	listErr  error
+
+	// identity
+	enrollUser    model.User
+	enrollDevice  model.Device
+	enrollRefresh string
+	enrollErr     error
+	lastEnroll    model.EnrollRequest
+
+	createDevice  model.Device
+	createRefresh string
+	createErr     error
+
+	devices    []model.Device
+	listDevErr error
+
+	revokeErr   error
+	lastRevokeU string
+	lastRevokeD string
+
+	refreshUserID   string
+	refreshDeviceID string
+	refreshErr      error
+	lastRefreshTok  string
+
+	inviteErr      error
+	lastInviteCode string
+}
+
+func (f *fakeStore) Enroll(_ context.Context, r model.EnrollRequest, _ time.Duration) (model.User, model.Device, string, error) {
+	f.lastEnroll = r
+	return f.enrollUser, f.enrollDevice, f.enrollRefresh, f.enrollErr
+}
+func (f *fakeStore) CreateDevice(_ context.Context, _ string, _ model.DeviceRegistration, _ time.Duration) (model.Device, string, error) {
+	return f.createDevice, f.createRefresh, f.createErr
+}
+func (f *fakeStore) ListDevices(context.Context, string) ([]model.Device, error) {
+	return f.devices, f.listDevErr
+}
+func (f *fakeStore) RevokeDevice(_ context.Context, userID, deviceID string) error {
+	f.lastRevokeU, f.lastRevokeD = userID, deviceID
+	return f.revokeErr
+}
+func (f *fakeStore) RefreshAccess(_ context.Context, plain string) (string, string, error) {
+	f.lastRefreshTok = plain
+	return f.refreshUserID, f.refreshDeviceID, f.refreshErr
+}
+func (f *fakeStore) CreateInvite(_ context.Context, code, _ string, _ *time.Time) error {
+	f.lastInviteCode = code
+	return f.inviteErr
 }
 
 func (f *fakeStore) ListLocations(context.Context) ([]model.Location, error) {

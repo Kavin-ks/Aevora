@@ -12,9 +12,9 @@ func gw(name string, status model.GatewayStatus, active, cap int) model.Gateway 
 
 func TestBest_PicksLeastLoadedHealthy(t *testing.T) {
 	cands := []model.Gateway{
-		gw("busy", model.GatewayHealthy, 200, 250),  // util 0.80
-		gw("idle", model.GatewayHealthy, 20, 250),   // util 0.08  <- winner
-		gw("mid", model.GatewayHealthy, 125, 250),   // util 0.50
+		gw("busy", model.GatewayHealthy, 200, 250), // util 0.80
+		gw("idle", model.GatewayHealthy, 20, 250),  // util 0.08  <- winner
+		gw("mid", model.GatewayHealthy, 125, 250),  // util 0.50
 	}
 	best, ok := Best(cands)
 	if !ok {
@@ -27,9 +27,9 @@ func TestBest_PicksLeastLoadedHealthy(t *testing.T) {
 
 func TestBest_SkipsUnhealthyAndFull(t *testing.T) {
 	cands := []model.Gateway{
-		gw("down", model.GatewayUnhealthy, 0, 250),   // excluded: unhealthy
-		gw("full", model.GatewayHealthy, 250, 250),   // excluded: no spare slots
-		gw("ok", model.GatewayHealthy, 249, 250),     // only selectable one
+		gw("down", model.GatewayUnhealthy, 0, 250), // excluded: unhealthy
+		gw("full", model.GatewayHealthy, 250, 250), // excluded: no spare slots
+		gw("ok", model.GatewayHealthy, 249, 250),   // only selectable one
 	}
 	best, ok := Best(cands)
 	if !ok {

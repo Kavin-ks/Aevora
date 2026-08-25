@@ -21,7 +21,12 @@ type Config struct {
 	// older than this. ReaperInterval: how often stale gateways are swept.
 	HeartbeatTTL   time.Duration // AEVORA_HEARTBEAT_TTL   (default 30s)
 	ReaperInterval time.Duration // AEVORA_REAPER_INTERVAL (default 10s)
-	ShutdownGrace  time.Duration
+
+	// AccessTTL: lifetime of a user access JWT. RefreshTTL: lifetime of a
+	// refresh token used to mint new access tokens without re-enrolling.
+	AccessTTL     time.Duration // AEVORA_ACCESS_TTL  (default 15m)
+	RefreshTTL    time.Duration // AEVORA_REFRESH_TTL (default 720h = 30d)
+	ShutdownGrace time.Duration
 }
 
 // FromEnv builds a Config, applying sane defaults for local development.
@@ -35,6 +40,8 @@ func FromEnv() Config {
 		DevSeed:          getbool("AEVORA_DEV_SEED", false),
 		HeartbeatTTL:     getdur("AEVORA_HEARTBEAT_TTL", 30*time.Second),
 		ReaperInterval:   getdur("AEVORA_REAPER_INTERVAL", 10*time.Second),
+		AccessTTL:        getdur("AEVORA_ACCESS_TTL", 15*time.Minute),
+		RefreshTTL:       getdur("AEVORA_REFRESH_TTL", 720*time.Hour),
 		ShutdownGrace:    10 * time.Second,
 	}
 }

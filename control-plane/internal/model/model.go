@@ -22,10 +22,10 @@ type GatewayStatus string
 
 const (
 	GatewayPending   GatewayStatus = "pending"   // registered, no heartbeat yet
-	GatewayHealthy   GatewayStatus = "healthy"    // heartbeating within TTL
-	GatewayUnhealthy GatewayStatus = "unhealthy"  // heartbeat expired
-	GatewayDraining  GatewayStatus = "draining"   // finishing existing sessions
-	GatewayDisabled  GatewayStatus = "disabled"   // deregistered / taken out
+	GatewayHealthy   GatewayStatus = "healthy"   // heartbeating within TTL
+	GatewayUnhealthy GatewayStatus = "unhealthy" // heartbeat expired
+	GatewayDraining  GatewayStatus = "draining"  // finishing existing sessions
+	GatewayDisabled  GatewayStatus = "disabled"  // deregistered / taken out
 )
 
 // Gateway is an exit node in a location, with its metadata and live metrics.
@@ -41,8 +41,8 @@ type Gateway struct {
 	PublicKey     string
 	EndpointHost  string
 	EndpointPort  int
-	Capacity      int     // max concurrent peers
-	BandwidthMbps int     // uplink hint for future bandwidth-aware selection
+	Capacity      int // max concurrent peers
+	BandwidthMbps int // uplink hint for future bandwidth-aware selection
 	Latitude      *float64
 	Longitude     *float64
 
@@ -89,4 +89,52 @@ type GatewayMetrics struct {
 	CPUPct      float64 `json:"cpu_pct"`
 	RxBps       int64   `json:"rx_bps"`
 	TxBps       int64   `json:"tx_bps"`
+}
+
+// --- Identity (Phase 1b) ----------------------------------------------------
+
+// User is an invited person.
+type User struct {
+	ID          string
+	Email       string
+	DisplayName string
+	Status      string
+	CreatedAt   time.Time
+}
+
+// Device is one client install belonging to a user. It holds only the PUBLIC
+// WireGuard key; the private key never leaves the device.
+type Device struct {
+	ID         string
+	UserID     string
+	Name       string
+	Platform   string
+	PublicKey  string
+	CreatedAt  time.Time
+	LastSeenAt *time.Time
+	RevokedAt  *time.Time
+}
+
+// ValidPlatform reports whether p is a supported client platform.
+func ValidPlatform(p string) bool {
+	switch p {
+	case "ios", "macos", "android", "windows", "linux", "cli":
+		return true
+	}
+	return false
+}
+
+// DeviceRegistration is the metadata a client supplies to register a device.
+type DeviceRegistration struct {
+	Name      string `json:"name"`
+	Platform  string `json:"platform"`
+	PublicKey string `json:"public_key"`
+}
+
+// EnrollRequest is the body of POST /v1/enroll: an invite plus the first device.
+type EnrollRequest struct {
+	InviteCode  string             `json:"invite_code"`
+	Email       string             `json:"email"`
+	DisplayName string             `json:"display_name"`
+	Device      DeviceRegistration `json:"device"`
 }
