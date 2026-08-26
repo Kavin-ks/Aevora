@@ -84,6 +84,9 @@ pub struct ConnectionResponse {
     pub persistent_keepalive: u16,
     #[serde(default)]
     pub expires_at: String,
+    /// Gateway in-tunnel address:port for the latency probe (may be empty).
+    #[serde(default)]
+    pub probe_addr: Option<String>,
 }
 
 fn default_keepalive() -> u16 {

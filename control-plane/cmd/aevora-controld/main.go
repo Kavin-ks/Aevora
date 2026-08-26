@@ -63,6 +63,7 @@ func run(log *slog.Logger) error {
 		RefreshTTL:       cfg.RefreshTTL,
 		LeaseTTL:         cfg.LeaseTTL,
 		ClientDNS:        cfg.ClientDNS,
+		ProbePort:        cfg.ProbePort,
 		AuthRatePerMin:   cfg.AuthRatePerMin,
 		AuthBurst:        cfg.AuthBurst,
 		TrustProxy:       cfg.TrustProxy,

@@ -3,7 +3,10 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aevora/control-plane/internal/auth"
@@ -28,6 +31,25 @@ type connectionResponse struct {
 	AllowedIPs   []string `json:"allowed_ips"`
 	Keepalive    int      `json:"persistent_keepalive"`
 	ExpiresAt    string   `json:"expires_at"`
+	// ProbeAddr is the gateway's in-tunnel address:port for the client's latency
+	// probe (a TCP round-trip through the tunnel). Empty if it can't be derived.
+	ProbeAddr string `json:"probe_addr,omitempty"`
+}
+
+// gatewayProbeAddr derives the gateway's in-tunnel address from a client's
+// assigned /24 address (the gateway is the .1 of the same subnet) and the probe
+// port. Returns "" if the assigned IP can't be parsed as IPv4.
+func gatewayProbeAddr(assignedIP string, port int) string {
+	host := assignedIP
+	if i := strings.IndexByte(host, '/'); i >= 0 {
+		host = host[:i]
+	}
+	ip := net.ParseIP(host).To4()
+	if ip == nil {
+		return ""
+	}
+	gw := net.IPv4(ip[0], ip[1], ip[2], 1)
+	return net.JoinHostPort(gw.String(), strconv.Itoa(port))
 }
 
 type serverIn struct {
@@ -91,6 +113,7 @@ func (s *Server) handleConnectionCreate(w http.ResponseWriter, r *http.Request) 
 		AllowedIPs:   []string{"0.0.0.0/0", "::/0"},
 		Keepalive:    25,
 		ExpiresAt:    conn.ExpiresAt.UTC().Format(time.RFC3339),
+		ProbeAddr:    gatewayProbeAddr(conn.AssignedIPv4, s.cfg.ProbePort),
 	})
 }
 

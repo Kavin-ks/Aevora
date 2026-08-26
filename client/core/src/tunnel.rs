@@ -87,6 +87,7 @@ mod tests {
             allowed_ips: vec!["0.0.0.0/0".into(), "::/0".into()],
             persistent_keepalive: 25,
             expires_at: "".into(),
+            probe_addr: None,
         }
     }
 

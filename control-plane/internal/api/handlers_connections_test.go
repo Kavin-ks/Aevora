@@ -62,6 +62,18 @@ func TestConnectionCreate_Success(t *testing.T) {
 	}
 }
 
+func TestGatewayProbeAddr(t *testing.T) {
+	if got := gatewayProbeAddr("10.7.1.5/32", 51821); got != "10.7.1.1:51821" {
+		t.Fatalf("got %q, want 10.7.1.1:51821", got)
+	}
+	if got := gatewayProbeAddr("10.7.80.42", 51821); got != "10.7.80.1:51821" {
+		t.Fatalf("got %q, want 10.7.80.1:51821", got)
+	}
+	if got := gatewayProbeAddr("not-an-ip", 51821); got != "" {
+		t.Fatalf("got %q, want empty", got)
+	}
+}
+
 func TestConnectionCreate_RequiresAuth(t *testing.T) {
 	rr := httptest.NewRecorder()
 	testServer(&fakeStore{}, connCfg()).ServeHTTP(rr,

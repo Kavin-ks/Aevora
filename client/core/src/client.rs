@@ -3,8 +3,9 @@
 //! enroll → connect → disconnect, delegating network I/O to a `Transport` and
 //! the OS tunnel to a `TunnelProvider`.
 
+use std::net::{SocketAddr, TcpStream};
 use std::sync::Mutex;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::api::ApiClient;
 use crate::error::{CoreError, Result};
@@ -50,6 +51,7 @@ struct Inner {
     download_bps: u64,                          // bytes/sec
     upload_bps: u64,                            // bytes/sec
     latency_ms: u32,                            // 0 = unknown
+    probe_addr: Option<String>,                 // gateway in-tunnel addr for latency
 }
 
 /// Live connection statistics for the UI. Rates are bytes per second; duration
@@ -95,6 +97,7 @@ impl VpnClient {
                 download_bps: 0,
                 upload_bps: 0,
                 latency_ms: 0,
+                probe_addr: None,
             }),
         }
     }
@@ -200,6 +203,7 @@ impl VpnClient {
             let mut inner = self.inner.lock().unwrap();
             inner.active_connection_id = Some(conn.connection_id);
             inner.current_server = Some(conn.server);
+            inner.probe_addr = conn.probe_addr;
         }
         Ok((summary, config))
     }
@@ -258,7 +262,22 @@ impl VpnClient {
         inner.download_bps = 0;
         inner.upload_bps = 0;
         inner.latency_ms = 0;
+        inner.probe_addr = None;
         Ok(())
+    }
+
+    /// Measures round-trip latency THROUGH the tunnel by timing a TCP handshake
+    /// to the gateway's in-tunnel probe responder (run by the node agent). This
+    /// is a real network measurement — WireGuard itself provides no RTT. Returns
+    /// None if there is no probe address or the probe fails.
+    fn measure_latency(&self) -> Option<u32> {
+        let addr = self.inner.lock().unwrap().probe_addr.clone()?;
+        let sock: SocketAddr = addr.parse().ok()?;
+        let start = Instant::now();
+        match TcpStream::connect_timeout(&sock, Duration::from_millis(1500)) {
+            Ok(_) => Some(start.elapsed().as_millis() as u32),
+            Err(_) => None,
+        }
     }
 
     /// Feeds the OS tunnel's cumulative byte counters (and optionally a measured
@@ -266,6 +285,17 @@ impl VpnClient {
     /// the lease (reporting the rates to the control plane). Call periodically
     /// while connected. Returns the freshly computed stats.
     pub fn report_tunnel_stats(&self, rx_bytes: u64, tx_bytes: u64, latency_ms: Option<u32>) -> Result<ConnectionStats> {
+        // Only meaningful while connected.
+        if !self.inner.lock().unwrap().state.is_connected() {
+            return Ok(ConnectionStats::default());
+        }
+        // Measure real latency through the tunnel if the platform didn't supply
+        // one (done outside the lock — it performs a network round-trip).
+        let measured = match latency_ms {
+            Some(l) => Some(l),
+            None => self.measure_latency(),
+        };
+
         let (connection_id, report) = {
             let mut inner = self.inner.lock().unwrap();
             if !inner.state.is_connected() {
@@ -278,7 +308,7 @@ impl VpnClient {
                 inner.upload_bps = rate(ptx, tx_bytes, dt);
             }
             inner.last_sample = Some((rx_bytes, tx_bytes, now));
-            if let Some(l) = latency_ms {
+            if let Some(l) = measured {
                 inner.latency_ms = l;
             }
             let report = StatsReport {
@@ -472,6 +502,30 @@ mod tests {
         // And disconnect still releases the lease recorded during prepare.
         client.disconnect().unwrap();
         assert_eq!(client.state(), ConnectionState::Disconnected);
+    }
+
+    #[test]
+    fn measure_latency_times_tcp_handshake() {
+        use std::net::TcpListener;
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+        std::thread::spawn(move || {
+            for _ in listener.incoming() {
+                break;
+            }
+        });
+
+        let client = VpnClient::new("http://cp", Box::new(scripted()), Box::new(FakeProvider::default()));
+        client.inner.lock().unwrap().probe_addr = Some(addr);
+        let latency = client.measure_latency();
+        assert!(latency.is_some(), "should measure a real latency via TCP handshake");
+        assert!(latency.unwrap() < 1000, "localhost latency should be small");
+    }
+
+    #[test]
+    fn measure_latency_none_without_probe() {
+        let client = VpnClient::new("http://cp", Box::new(scripted()), Box::new(FakeProvider::default()));
+        assert_eq!(client.measure_latency(), None);
     }
 
     #[test]

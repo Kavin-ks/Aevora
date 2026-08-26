@@ -33,6 +33,7 @@ type Config struct {
 	// removed. ClientDNS: resolver(s) pushed to connected clients.
 	LeaseTTL  time.Duration // AEVORA_LEASE_TTL  (default 5m)
 	ClientDNS []string      // AEVORA_CLIENT_DNS (default 9.9.9.9,149.112.112.112)
+	ProbePort int           // AEVORA_PROBE_PORT — agent's in-tunnel latency responder (default 51821)
 
 	// Per-client-IP throttling on auth endpoints (login/enroll/refresh).
 	AuthRatePerMin int  // AEVORA_AUTH_RATE_PER_MIN (default 10)
@@ -57,6 +58,7 @@ func FromEnv() Config {
 		RefreshTTL:       getdur("AEVORA_REFRESH_TTL", 720*time.Hour),
 		LeaseTTL:         getdur("AEVORA_LEASE_TTL", 5*time.Minute),
 		ClientDNS:        getcsv("AEVORA_CLIENT_DNS", []string{"9.9.9.9", "149.112.112.112"}),
+		ProbePort:        getint("AEVORA_PROBE_PORT", 51821),
 		AuthRatePerMin:   getint("AEVORA_AUTH_RATE_PER_MIN", 10),
 		AuthBurst:        getint("AEVORA_AUTH_BURST", 5),
 		TrustProxy:       getbool("AEVORA_TRUST_PROXY", false),

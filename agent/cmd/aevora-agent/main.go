@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/aevora/agent/internal/cp"
+	"github.com/aevora/agent/internal/probe"
 	"github.com/aevora/agent/internal/reconcile"
 	"github.com/aevora/agent/internal/sysload"
 	"github.com/aevora/agent/internal/wg"
@@ -27,6 +29,7 @@ type config struct {
 	tokenFile        string
 	enrollmentSecret string
 	syncInterval     time.Duration
+	probePort        int
 	reg              cp.Registration
 }
 
@@ -46,6 +49,13 @@ func run(log *slog.Logger) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Start the in-tunnel latency responder (clients time a TCP handshake to it).
+	if inside, err := probe.InsideIP(cfg.reg.WGSubnetV4); err == nil {
+		go probe.Serve(ctx, net.JoinHostPort(inside, strconv.Itoa(cfg.probePort)), log)
+	} else {
+		log.Warn("latency probe disabled", "err", err)
+	}
 
 	// Obtain (or reuse) the node token.
 	token, err := ensureRegistered(ctx, log, cfg, client, iface)
@@ -139,6 +149,7 @@ func loadConfig() config {
 		tokenFile:        getenv("AEVORA_NODE_TOKEN_FILE", "/etc/aevora/node.token"),
 		enrollmentSecret: os.Getenv("AEVORA_ENROLLMENT_SECRET"),
 		syncInterval:     getdur("AEVORA_SYNC_INTERVAL", 3*time.Second),
+		probePort:        getint("AEVORA_PROBE_PORT", 51821),
 		reg: cp.Registration{
 			Name:          os.Getenv("AEVORA_GATEWAY_NAME"),
 			CountryCode:   os.Getenv("AEVORA_COUNTRY_CODE"),

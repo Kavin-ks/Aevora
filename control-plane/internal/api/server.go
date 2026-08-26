@@ -54,6 +54,7 @@ type ServerConfig struct {
 	RefreshTTL       time.Duration // lifetime of a refresh token
 	LeaseTTL         time.Duration // lifetime of a connection lease before renewal
 	ClientDNS        []string      // resolver(s) pushed to connected clients
+	ProbePort        int           // agent's in-tunnel latency responder port
 	AuthRatePerMin   int           // per-IP request/min on auth endpoints (0 => default 10)
 	AuthBurst        int           // per-IP burst on auth endpoints (0 => default 5)
 	TrustProxy       bool          // behind a trusted reverse proxy: use X-Forwarded-For

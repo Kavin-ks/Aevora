@@ -23,9 +23,9 @@ final class AppModel: ObservableObject {
     @Published var durationSeconds: Int = 0
     @Published var lastError: String?
 
-    // Real stats: download/upload/duration come from the core, computed from the
-    // OS tunnel's byte counters. Latency stays "—" until an in-tunnel probe is
-    // added (WireGuard exposes no RTT); it is never faked.
+    // Real stats from the core: download/upload/duration from the OS tunnel's
+    // byte counters, and latency from an in-tunnel TCP probe to the gateway
+    // (measured by the core). Shown as "—" only before the first sample; never faked.
     @Published var latencyText: String = "—"
     @Published var downloadText: String = "—"
     @Published var uploadText: String = "—"
