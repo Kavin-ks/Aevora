@@ -1,0 +1,30 @@
+# systemd unit for the Aevora node agent on a gateway.
+#
+# Install:
+#   sudo cp aevora-agent /usr/local/bin/            # the cross-built binary
+#   sudo install -m600 aevora-agent.env.example /etc/aevora/agent.env  # then edit
+#   sudo cp aevora-agent.service /etc/systemd/system/
+#   sudo systemctl enable --now aevora-agent
+#
+# Requires WireGuard already up (the Phase 0 gateway kit brings up wg0).
+[Unit]
+Description=Aevora VPN node agent
+After=network-online.target wg-quick@wg0.service
+Wants=network-online.target
+Requires=wg-quick@wg0.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/aevora/agent.env
+ExecStart=/usr/local/bin/aevora-agent
+Restart=always
+RestartSec=5
+# The agent only needs to run `wg` and read /proc, /sys.
+User=root
+AmbientCapabilities=CAP_NET_ADMIN
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

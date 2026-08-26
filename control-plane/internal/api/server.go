@@ -56,6 +56,7 @@ type ServerConfig struct {
 	ClientDNS        []string      // resolver(s) pushed to connected clients
 	AuthRatePerMin   int           // per-IP request/min on auth endpoints (0 => default 10)
 	AuthBurst        int           // per-IP burst on auth endpoints (0 => default 5)
+	TrustProxy       bool          // behind a trusted reverse proxy: use X-Forwarded-For
 }
 
 // Server wires handlers to their dependencies.
@@ -138,7 +139,7 @@ func (s *Server) authUser(w http.ResponseWriter, r *http.Request) (userID string
 // rateLimited wraps a handler with per-client-IP throttling.
 func (s *Server) rateLimited(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if s.authLimiter != nil && !s.authLimiter.Allow(clientIP(r)) {
+		if s.authLimiter != nil && !s.authLimiter.Allow(s.clientIP(r)) {
 			writeError(w, http.StatusTooManyRequests, "too many requests")
 			return
 		}
@@ -146,9 +147,16 @@ func (s *Server) rateLimited(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// clientIP extracts the client's IP from RemoteAddr. Behind a trusted proxy,
-// terminate TLS there and forward the real IP (see deployment docs).
-func clientIP(r *http.Request) string {
+// clientIP extracts the client's IP. When TrustProxy is set (running behind a
+// TLS-terminating reverse proxy that sets X-Forwarded-For), the first hop is
+// used; otherwise RemoteAddr. Only enable TrustProxy behind a proxy you control,
+// or the header can be spoofed to evade rate limiting.
+func (s *Server) clientIP(r *http.Request) string {
+	if s.cfg.TrustProxy {
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			return strings.TrimSpace(strings.Split(xff, ",")[0])
+		}
+	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return r.RemoteAddr

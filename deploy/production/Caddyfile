@@ -1,0 +1,14 @@
+# Caddy terminates TLS (automatic Let's Encrypt) and reverse-proxies to the
+# control plane. The domain comes from the AEVORA_DOMAIN environment variable.
+{$AEVORA_DOMAIN} {
+	encode zstd gzip
+
+	# Keep the Prometheus metrics endpoint off the public internet. Scrape it
+	# from inside the Docker network / a private subnet instead.
+	@metrics path /metrics
+	respond @metrics 404
+
+	reverse_proxy controld:8080 {
+		header_up X-Forwarded-For {remote_host}
+	}
+}

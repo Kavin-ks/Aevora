@@ -35,8 +35,9 @@ type Config struct {
 	ClientDNS []string      // AEVORA_CLIENT_DNS (default 9.9.9.9,149.112.112.112)
 
 	// Per-client-IP throttling on auth endpoints (login/enroll/refresh).
-	AuthRatePerMin int // AEVORA_AUTH_RATE_PER_MIN (default 10)
-	AuthBurst      int // AEVORA_AUTH_BURST        (default 5)
+	AuthRatePerMin int  // AEVORA_AUTH_RATE_PER_MIN (default 10)
+	AuthBurst      int  // AEVORA_AUTH_BURST        (default 5)
+	TrustProxy     bool // AEVORA_TRUST_PROXY       — behind a reverse proxy, honor X-Forwarded-For
 
 	ShutdownGrace time.Duration
 }
@@ -58,6 +59,7 @@ func FromEnv() Config {
 		ClientDNS:        getcsv("AEVORA_CLIENT_DNS", []string{"9.9.9.9", "149.112.112.112"}),
 		AuthRatePerMin:   getint("AEVORA_AUTH_RATE_PER_MIN", 10),
 		AuthBurst:        getint("AEVORA_AUTH_BURST", 5),
+		TrustProxy:       getbool("AEVORA_TRUST_PROXY", false),
 		ShutdownGrace:    10 * time.Second,
 	}
 }

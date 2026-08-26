@@ -65,6 +65,7 @@ func run(log *slog.Logger) error {
 		ClientDNS:        cfg.ClientDNS,
 		AuthRatePerMin:   cfg.AuthRatePerMin,
 		AuthBurst:        cfg.AuthBurst,
+		TrustProxy:       cfg.TrustProxy,
 	}, log)
 
 	// Periodically evict idle rate-limiter entries.
