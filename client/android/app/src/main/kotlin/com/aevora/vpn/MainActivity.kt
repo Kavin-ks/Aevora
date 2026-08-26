@@ -3,56 +3,54 @@ package com.aevora.vpn
 import android.app.Activity
 import android.net.VpnService
 import android.os.Bundle
-import android.widget.Toast
-import kotlin.concurrent.thread
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.aevora.vpn.ui.AevoraApp
+import com.aevora.vpn.ui.AevoraTheme
 
 /**
- * Minimal launcher activity. Phase 2b focuses on the tunnel path, not the UI;
- * this wires the VpnService consent flow to [AevoraTunnelManager] so the shared
- * core can drive a real connection. A full Compose UI (map, locations, stats)
- * comes later — this is intentionally a stub, not a fake tunnel.
+ * Hosts the Compose UI and owns the Android VPN consent flow. When the user taps
+ * Connect, we request VpnService consent; on approval, the view model brings up
+ * the real WireGuard tunnel via the shared core + GoBackend.
  */
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
 
-    private lateinit var manager: AevoraTunnelManager
-    private var pendingCountry: String? = null
+    private val model: AevoraViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        manager = AevoraTunnelManager(applicationContext, BuildConfig.CONTROL_URL)
-        // TODO: build the consumer UI (enroll form, locations, connect/disconnect,
-        // status + stats). For now, call connectTo(...) from your own UI/testing.
-    }
-
-    /** Requests VPN consent, then connects through the shared core off-thread. */
-    fun connectTo(countryCode: String) {
-        pendingCountry = countryCode
-        val intent = VpnService.prepare(this)
-        if (intent != null) {
-            startActivityForResult(intent, REQ_VPN)
-        } else {
-            onActivityResult(REQ_VPN, RESULT_OK, null)
+    private val vpnConsent = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            model.connect()
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_VPN && resultCode == RESULT_OK) {
-            val country = pendingCountry ?: return
-            thread {
-                try {
-                    val server = manager.connect(country)
-                    runOnUiThread { Toast.makeText(this, "Connected: $server", Toast.LENGTH_SHORT).show() }
-                } catch (e: Exception) {
-                    runOnUiThread { Toast.makeText(this, "Failed: ${e.message}", Toast.LENGTH_LONG).show() }
-                }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            AevoraTheme {
+                val state by model.state.collectAsState()
+                AevoraApp(
+                    state = state,
+                    onEnroll = { invite, email -> model.enroll(invite, email) },
+                    onSelect = { code -> model.select(code) },
+                    onConnect = { requestVpnThenConnect() },
+                    onDisconnect = { model.disconnect() },
+                    onRefresh = { model.loadLocations() },
+                )
             }
         }
     }
 
-    fun disconnect() = thread { manager.disconnect() }
-
-    companion object {
-        private const val REQ_VPN = 1001
+    /** Requests VpnService consent (once), then connects. */
+    private fun requestVpnThenConnect() {
+        val intent = VpnService.prepare(this)
+        if (intent != null) {
+            vpnConsent.launch(intent)
+        } else {
+            model.connect()
+        }
     }
 }

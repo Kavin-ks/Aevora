@@ -17,7 +17,12 @@ android/
   app/src/main/AndroidManifest.xml  Declares GoBackend's VpnService
   app/src/main/kotlin/com/aevora/vpn/
     AevoraTunnelManager.kt          Core + GoBackend integration (the real bridge)
-    MainActivity.kt                 Minimal launcher (VpnService consent → connect)
+    AevoraViewModel.kt              State + orchestration (enroll/connect/stats)
+    SessionStore.kt                 EncryptedSharedPreferences (Android Keystore)
+    MainActivity.kt                 Compose host + VpnService consent flow
+    ui/AevoraApp.kt                 Compose screens (enroll, main, stats)
+    ui/WorldMap.kt                  Compose world map (positions static, availability from CP)
+    ui/Theme.kt                     Aevora Material3 theme
   app/src/main/jniLibs/             Generated (git-ignored): libaevora_core.so per ABI
   app/src/main/java/uniffi/         Generated (git-ignored): Kotlin bindings
 ```
@@ -45,15 +50,22 @@ The first connect triggers Android's system VPN consent dialog (`VpnService.prep
 
 ## Status
 
-The tunnel integration and core bridge are complete; the **UI is a stub**
-(`MainActivity` exposes `connectTo(country)` / `disconnect()`), to be built into
-the full consumer experience (map, locations, live stats) later. No fake tunnel
-is presented — connecting establishes a genuine WireGuard `VpnService`.
+Complete consumer app: onboarding/enrollment, world map + location list, country
+selection, Connect/Disconnect, live connection state, and real stats (duration,
+latency, download, upload) — all driven by the shared Rust core, with a genuine
+WireGuard `VpnService` tunnel via GoBackend. No fake tunnel or simulated stats.
+
+Cannot be compiled in this repo's core loop (needs Android Studio + NDK). Build
+locally:
+
+```bash
+./build-core.sh
+./gradlew assembleDebug -PaevoraControlUrl=https://control.example.com
+```
 
 ## Security
 
-- The device private key is generated in the core and, for hardening, should be
-  stored in the Android Keystore / EncryptedSharedPreferences (a follow-up; the
-  core currently returns it in `FfiSession` for the app to persist). Only the
-  public key is sent to the control plane.
+- The device private key is generated in the core and persisted in
+  **EncryptedSharedPreferences** (master key in the **Android Keystore**) — see
+  `SessionStore.kt`. Only the public key is sent to the control plane.
 - No signing keystore, credentials, or endpoints are committed.
