@@ -62,6 +62,14 @@ type fakeStore struct {
 	inviteErr      error
 	lastInviteCode string
 
+	// auth / password
+	setPasswordErr error
+	lastSetPwdUser string
+	credUserID     string
+	credHash       string
+	credStatus     string
+	credErr        error
+
 	// connections
 	connResult      model.Connection
 	connErr         error
@@ -118,6 +126,13 @@ func (f *fakeStore) RefreshAccess(_ context.Context, plain string) (string, stri
 func (f *fakeStore) CreateInvite(_ context.Context, code, _ string, _ *time.Time) error {
 	f.lastInviteCode = code
 	return f.inviteErr
+}
+func (f *fakeStore) SetPassword(_ context.Context, userID, _ string) error {
+	f.lastSetPwdUser = userID
+	return f.setPasswordErr
+}
+func (f *fakeStore) GetCredentialsByEmail(_ context.Context, _ string) (string, string, string, error) {
+	return f.credUserID, f.credHash, f.credStatus, f.credErr
 }
 
 func (f *fakeStore) ListLocations(context.Context) ([]model.Location, error) {

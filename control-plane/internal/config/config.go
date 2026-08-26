@@ -34,6 +34,10 @@ type Config struct {
 	LeaseTTL  time.Duration // AEVORA_LEASE_TTL  (default 5m)
 	ClientDNS []string      // AEVORA_CLIENT_DNS (default 9.9.9.9,149.112.112.112)
 
+	// Per-client-IP throttling on auth endpoints (login/enroll/refresh).
+	AuthRatePerMin int // AEVORA_AUTH_RATE_PER_MIN (default 10)
+	AuthBurst      int // AEVORA_AUTH_BURST        (default 5)
+
 	ShutdownGrace time.Duration
 }
 
@@ -52,8 +56,19 @@ func FromEnv() Config {
 		RefreshTTL:       getdur("AEVORA_REFRESH_TTL", 720*time.Hour),
 		LeaseTTL:         getdur("AEVORA_LEASE_TTL", 5*time.Minute),
 		ClientDNS:        getcsv("AEVORA_CLIENT_DNS", []string{"9.9.9.9", "149.112.112.112"}),
+		AuthRatePerMin:   getint("AEVORA_AUTH_RATE_PER_MIN", 10),
+		AuthBurst:        getint("AEVORA_AUTH_BURST", 5),
 		ShutdownGrace:    10 * time.Second,
 	}
+}
+
+func getint(key string, def int) int {
+	if v, ok := os.LookupEnv(key); ok {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return def
 }
 
 func getcsv(key string, def []string) []string {

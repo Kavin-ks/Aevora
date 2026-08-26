@@ -62,7 +62,23 @@ func run(log *slog.Logger) error {
 		RefreshTTL:       cfg.RefreshTTL,
 		LeaseTTL:         cfg.LeaseTTL,
 		ClientDNS:        cfg.ClientDNS,
+		AuthRatePerMin:   cfg.AuthRatePerMin,
+		AuthBurst:        cfg.AuthBurst,
 	}, log)
+
+	// Periodically evict idle rate-limiter entries.
+	go func() {
+		t := time.NewTicker(5 * time.Minute)
+		defer t.Stop()
+		for {
+			select {
+			case <-bgCtx.Done():
+				return
+			case <-t.C:
+				apiSrv.Limiter().Cleanup()
+			}
+		}
+	}()
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
@@ -117,6 +133,13 @@ func runReaper(ctx context.Context, st *store.Store, interval, ttl time.Duration
 				}
 			} else if n > 0 {
 				log.Info("reaper expired stale leases", "count", n)
+			}
+			if n, err := st.ExpireLeasesOnUnhealthyGateways(ctx); err != nil {
+				if ctx.Err() == nil {
+					log.Error("reaper: failover", "err", err)
+				}
+			} else if n > 0 {
+				log.Info("reaper expired leases on unhealthy gateways (failover)", "count", n)
 			}
 		}
 	}

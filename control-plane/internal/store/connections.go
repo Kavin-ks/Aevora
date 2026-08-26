@@ -52,12 +52,20 @@ func (s *Store) CreateConnection(ctx context.Context, userID, deviceID, country 
 		return model.Connection{}, err
 	}
 
+	// 1b. Release any existing active lease for this device (reconnect / dedupe),
+	//     so a device never holds two peers and no orphan is left behind.
+	if _, err := tx.Exec(ctx,
+		`UPDATE leases SET state = 'released', released_at = now()
+		 WHERE device_id = $1 AND state = 'active'`, deviceID); err != nil {
+		return model.Connection{}, err
+	}
+
 	// 2. Candidate gateways in the country, healthy and heartbeating, with load
-	//    measured as active lease count.
+	//    measured as active lease count, plus advertised bandwidth for scoring.
 	rows, err := tx.Query(ctx,
 		`SELECT g.id::text, g.name, COALESCE(g.city,''), l.country_name, g.public_key,
 		        g.endpoint_host, g.endpoint_port, g.wg_subnet_v4::text, g.wg_subnet_v6::text,
-		        g.capacity,
+		        g.capacity, COALESCE(g.bandwidth_mbps,0), g.rx_bps, g.tx_bps,
 		        (SELECT count(*) FROM leases le WHERE le.gateway_id = g.id AND le.state = 'active') AS active
 		 FROM gateways g JOIN locations l ON l.id = g.location_id
 		 WHERE l.code = $1 AND l.enabled = true AND g.status = 'healthy'
@@ -72,7 +80,8 @@ func (s *Store) CreateConnection(ctx context.Context, userID, deviceID, country 
 		var c gwCandidate
 		var port int
 		if err := rows.Scan(&c.g.ID, &c.g.Name, &c.g.City, &c.g.CountryName, &c.g.PublicKey,
-			&c.g.EndpointHost, &port, &c.subnetV4, &c.subnetV6, &c.g.Capacity, &c.g.ActivePeers); err != nil {
+			&c.g.EndpointHost, &port, &c.subnetV4, &c.subnetV6, &c.g.Capacity,
+			&c.g.BandwidthMbps, &c.g.RxBps, &c.g.TxBps, &c.g.ActivePeers); err != nil {
 			rows.Close()
 			return model.Connection{}, err
 		}
@@ -280,6 +289,21 @@ func (s *Store) RenewConnection(ctx context.Context, userID, leaseID string, lea
 func (s *Store) ExpireStaleLeases(ctx context.Context) (int64, error) {
 	tag, err := s.pool.Exec(ctx,
 		`UPDATE leases SET state = 'expired' WHERE state = 'active' AND expires_at < now()`)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}
+
+// ExpireLeasesOnUnhealthyGateways expires active leases whose gateway is no
+// longer healthy (unhealthy/draining/disabled). This is the failover trigger:
+// the client's tunnel to a dead gateway is broken anyway, so the lease is
+// released and the client reconnects — landing on a healthy gateway.
+func (s *Store) ExpireLeasesOnUnhealthyGateways(ctx context.Context) (int64, error) {
+	tag, err := s.pool.Exec(ctx,
+		`UPDATE leases SET state = 'expired'
+		 WHERE state = 'active'
+		   AND gateway_id IN (SELECT id FROM gateways WHERE status <> 'healthy')`)
 	if err != nil {
 		return 0, err
 	}

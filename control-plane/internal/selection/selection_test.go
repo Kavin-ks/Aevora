@@ -50,6 +50,26 @@ func TestBest_NoneSelectable(t *testing.T) {
 	}
 }
 
+func TestFitness_BandwidthBreaksTie(t *testing.T) {
+	// Two gateways with identical peer load; the one with more spare bandwidth
+	// should score higher.
+	busyBw := model.Gateway{Status: model.GatewayHealthy, ActivePeers: 100, Capacity: 250,
+		BandwidthMbps: 1000, RxBps: 400_000_000, TxBps: 400_000_000} // 800/1000 Mbps used
+	idleBw := model.Gateway{Status: model.GatewayHealthy, ActivePeers: 100, Capacity: 250,
+		BandwidthMbps: 1000, RxBps: 50_000_000, TxBps: 50_000_000} // 100/1000 Mbps used
+	if Fitness(idleBw) <= Fitness(busyBw) {
+		t.Fatalf("gateway with more spare bandwidth should score higher: idle=%v busy=%v",
+			Fitness(idleBw), Fitness(busyBw))
+	}
+}
+
+func TestFitness_NoBandwidthFallsBackToLoad(t *testing.T) {
+	g := model.Gateway{Status: model.GatewayHealthy, ActivePeers: 0, Capacity: 100} // no bandwidth advertised
+	if Fitness(g) != 1 {
+		t.Fatalf("empty gateway without bandwidth data should score 1, got %v", Fitness(g))
+	}
+}
+
 func TestFitness_Bounds(t *testing.T) {
 	if f := Fitness(gw("empty", model.GatewayHealthy, 0, 100)); f != 1 {
 		t.Fatalf("empty gateway fitness want 1, got %v", f)

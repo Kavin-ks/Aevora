@@ -177,9 +177,16 @@ func (s *Store) RevokeDevice(ctx context.Context, userID, deviceID string) error
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	_, err = s.pool.Exec(ctx,
+	// Revoke the device's refresh tokens...
+	if _, err = s.pool.Exec(ctx,
 		`UPDATE refresh_tokens SET revoked_at = now()
-		 WHERE device_id = $1 AND revoked_at IS NULL`, deviceID)
+		 WHERE device_id = $1 AND revoked_at IS NULL`, deviceID); err != nil {
+		return err
+	}
+	// ...and expire any active connection so its gateway peer is removed.
+	_, err = s.pool.Exec(ctx,
+		`UPDATE leases SET state = 'expired'
+		 WHERE device_id = $1 AND state = 'active'`, deviceID)
 	return err
 }
 
@@ -211,4 +218,36 @@ func (s *Store) CreateInvite(ctx context.Context, code, note string, expiresAt *
 		`INSERT INTO invite_codes (code, note, expires_at) VALUES ($1, $2, $3)`,
 		code, nilIfEmpty(note), expiresAt)
 	return err
+}
+
+// SetPassword sets or replaces a user's argon2id password hash.
+func (s *Store) SetPassword(ctx context.Context, userID, passwordHash string) error {
+	tag, err := s.pool.Exec(ctx,
+		`UPDATE users SET password_hash = $2 WHERE id = $1`, userID, passwordHash)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// GetCredentialsByEmail returns a user's login material (passwordHash is empty
+// if no password is set). ErrNotFound if the email is unknown.
+func (s *Store) GetCredentialsByEmail(ctx context.Context, email string) (userID, passwordHash, status string, err error) {
+	var hash *string
+	err = s.pool.QueryRow(ctx,
+		`SELECT id::text, password_hash, status FROM users WHERE email = $1`, email).
+		Scan(&userID, &hash, &status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", "", ErrNotFound
+	}
+	if err != nil {
+		return "", "", "", err
+	}
+	if hash != nil {
+		passwordHash = *hash
+	}
+	return userID, passwordHash, status, nil
 }
