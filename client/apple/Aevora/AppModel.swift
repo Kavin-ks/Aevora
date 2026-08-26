@@ -93,6 +93,17 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Connects to the country currently selected on the map/list.
+    func connectSelected() {
+        if let c = selectedCountry { connect(country: c) }
+    }
+
+    /// The display name of the selected country, if any.
+    var selectedCountryName: String? {
+        guard let code = selectedCountry else { return nil }
+        return locations.first(where: { $0.code == code })?.country
+    }
+
     func disconnect() {
         vpn.stop()
         run {

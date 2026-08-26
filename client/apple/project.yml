@@ -9,7 +9,7 @@ name: Aevora
 options:
   bundleIdPrefix: com.aevora
   deploymentTarget:
-    macOS: "13.0"
+    macOS: "14.0" # WorldMapView uses the SwiftUI Map content builder (macOS 14+)
   createIntermediateGroups: true
 
 settings:

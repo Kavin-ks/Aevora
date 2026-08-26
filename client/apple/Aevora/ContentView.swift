@@ -1,30 +1,35 @@
 import SwiftUI
 import aevora_core
 
-// Deliberately minimal per Phase 2b ("first make the tunnel work reliably").
-// The world map and polished consumer UI come later; this exercises the full
-// enroll -> locations -> connect -> status -> disconnect path.
+// Consumer layout: Aevora wordmark, world map, a selected-country panel with a
+// large Connect/Disconnect button, connection state, and live stats. Original
+// Aevora identity — no third-party branding.
 
 struct ContentView: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Aevora").font(.largeTitle.bold())
+        VStack(spacing: 18) {
+            HStack(spacing: 4) {
+                Text("Aevora").font(.system(size: 28, weight: .bold))
+                Text("•").font(.system(size: 28, weight: .bold)).foregroundStyle(Theme.accent)
+            }
 
             if !model.isEnrolled {
                 EnrollView()
             } else {
-                StatusView()
-                LocationsView()
+                WorldMapView()
+                ControlPanel()
+                LocationPicker()
             }
 
             if let err = model.lastError {
                 Text(err).font(.footnote).foregroundStyle(.red).lineLimit(3)
             }
+            Spacer(minLength: 0)
         }
-        .padding(24)
-        .frame(minWidth: 380, minHeight: 460)
+        .padding(22)
+        .frame(minWidth: 440, minHeight: 620)
         .onAppear { if model.isEnrolled { model.loadLocations() } }
     }
 }
@@ -35,38 +40,67 @@ private struct EnrollView: View {
     @State private var email = ""
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             Text("Enroll this device").font(.headline)
             TextField("Invite code", text: $invite).textFieldStyle(.roundedBorder)
             TextField("Email", text: $email).textFieldStyle(.roundedBorder)
             Button("Enroll") {
                 model.enroll(invite: invite, email: email, deviceName: Host.current().localizedName ?? "Mac")
             }
+            .buttonStyle(.borderedProminent).tint(Theme.accent)
             .disabled(invite.isEmpty || email.isEmpty)
         }
+        .frame(maxWidth: 320)
+        .padding(.top, 40)
     }
 }
 
-private struct StatusView: View {
+private struct ControlPanel: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
-        VStack(spacing: 6) {
-            Text(stateText).font(.title2.bold()).foregroundStyle(stateColor)
+        VStack(spacing: 10) {
+            Text(stateText)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(stateColor)
+
+            Text(model.phase == .connected ? model.serverName
+                 : (model.selectedCountryName ?? "Select a location"))
+                .font(.subheadline).foregroundStyle(.secondary)
+
+            Button(action: primaryAction) {
+                Text(primaryLabel)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity).frame(height: 46)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(model.phase == .connected ? .red : Theme.accent)
+            .disabled(primaryDisabled)
+
             if model.phase == .connected {
-                Text(model.serverName).font(.subheadline)
-                Grid(horizontalSpacing: 24, verticalSpacing: 4) {
-                    GridRow { Text("Duration"); Text(model.durationText).monospacedDigit() }
-                    GridRow { Text("Latency"); Text(model.latencyText) }
-                    GridRow { Text("Download"); Text(model.downloadText) }
-                    GridRow { Text("Upload"); Text(model.uploadText) }
-                }
-                .font(.footnote).foregroundStyle(.secondary)
-                Button("Disconnect") { model.disconnect() }.tint(.red)
+                StatsGrid()
             }
         }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.secondary.opacity(0.08)))
     }
 
+    private func primaryAction() {
+        switch model.phase {
+        case .connected, .connecting: model.disconnect()
+        default: model.connectSelected()
+        }
+    }
+    private var primaryLabel: String {
+        switch model.phase {
+        case .connected: return "Disconnect"
+        case .connecting: return "Cancel"
+        default: return "Connect"
+        }
+    }
+    private var primaryDisabled: Bool {
+        model.phase != .connected && model.phase != .connecting && model.selectedCountry == nil
+    }
     private var stateText: String {
         switch model.phase {
         case .connected: return "CONNECTED"
@@ -84,26 +118,40 @@ private struct StatusView: View {
     }
 }
 
-private struct LocationsView: View {
+private struct StatsGrid: View {
     @EnvironmentObject var model: AppModel
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Locations").font(.headline)
-            List(model.locations, id: \.code) { loc in
-                HStack {
-                    Text(loc.country)
-                    Spacer()
-                    if loc.available {
-                        Button("Connect") { model.connect(country: loc.code) }
-                            .disabled(model.phase == .connecting || model.phase == .connected)
-                    } else {
-                        Text("unavailable").foregroundStyle(.secondary).font(.caption)
-                    }
+        Grid(horizontalSpacing: 28, verticalSpacing: 6) {
+            GridRow { label("Duration"); value(model.durationText).monospacedDigit() }
+            GridRow { label("Latency"); value(model.latencyText) }
+            GridRow { label("Download"); value(model.downloadText) }
+            GridRow { label("Upload"); value(model.uploadText) }
+        }
+        .padding(.top, 6)
+    }
+    private func label(_ s: String) -> some View { Text(s).font(.caption).foregroundStyle(.secondary) }
+    private func value(_ s: String) -> Text { Text(s).font(.caption.weight(.medium)) }
+}
+
+private struct LocationPicker: View {
+    @EnvironmentObject var model: AppModel
+    var body: some View {
+        HStack {
+            Picker("Location", selection: Binding(
+                get: { model.selectedCountry ?? "" },
+                set: { model.selectedCountry = $0.isEmpty ? nil : $0 }
+            )) {
+                Text("Select…").tag("")
+                ForEach(model.locations, id: \.code) { loc in
+                    Text(loc.available ? loc.country : "\(loc.country) (unavailable)")
+                        .tag(loc.code)
                 }
             }
-            .frame(minHeight: 160)
-            Button("Refresh") { model.loadLocations() }.font(.caption)
+            .disabled(model.phase == .connected || model.phase == .connecting)
+            Button {
+                model.loadLocations()
+            } label: { Image(systemName: "arrow.clockwise") }
+            .help("Refresh locations")
         }
     }
 }

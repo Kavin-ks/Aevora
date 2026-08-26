@@ -17,7 +17,8 @@ reuses the same code (see below).
 apple/
   build-core.sh               Builds AevoraCore.xcframework + Swift bindings (run first)
   project.yml                 XcodeGen spec (generates Aevora.xcodeproj)
-  Aevora/                     App target (SwiftUI, NETunnelProviderManager driver)
+  Aevora/                     App target: SwiftUI UI (ContentView, WorldMapView),
+                              AppModel, NETunnelProviderManager driver, Keychain
   PacketTunnel/               Packet-tunnel extension (WireGuardKit) — the real tunnel
   Shared/                     Keychain helper shared by app + extension
   build/                      Generated (git-ignored): xcframework + bindings
@@ -28,6 +29,10 @@ The tunnel is genuine: `PacketTunnelProvider` parses the WireGuard config with
 no mock and no custom protocol.
 
 ## Build & run (macOS)
+
+The UI (world map via MapKit, connect/disconnect, live stats) targets **macOS
+14+**. Availability and the location list come from the control plane; only the
+map marker positions use a static coordinate lookup (`WorldMapView.swift`).
 
 Prerequisites: full Xcode selected, plus `brew install xcodegen go`.
 
