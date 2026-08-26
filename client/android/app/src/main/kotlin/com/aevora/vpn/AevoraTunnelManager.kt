@@ -8,6 +8,7 @@ import com.wireguard.config.Config
 import java.io.BufferedReader
 import java.io.StringReader
 import uniffi.aevora_core.AevoraClient
+import uniffi.aevora_core.FfiStats
 import uniffi.aevora_core.FfiTunnelConfig
 
 /**
@@ -56,6 +57,21 @@ class AevoraTunnelManager(context: Context, controlUrl: String) {
     }
 
     fun keepAlive() = client.keepAlive()
+
+    /**
+     * Reads the real WireGuard byte counters from GoBackend and feeds them to the
+     * core, which computes download/upload rates and renews the lease. Call
+     * periodically (e.g. every 3s) while connected.
+     */
+    fun reportStats(): FfiStats? {
+        val stats = backend.getStatistics(tunnel)
+        var rx = 0L
+        var tx = 0L
+        for (key in stats.peers()) {
+            stats.peer(key)?.let { rx += it.rxBytes; tx += it.txBytes }
+        }
+        return client.reportTunnelStats(rx.toULong(), tx.toULong(), null)
+    }
 
     companion object {
         /** Renders a wg-quick config the wireguard-android parser understands. */

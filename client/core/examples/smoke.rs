@@ -50,6 +50,15 @@ fn main() {
     client.keep_alive().expect("keep_alive");
     println!("keep-alive ok");
 
+    // Feed tunnel counters; the core computes rates and reports to /stats.
+    let stats = client
+        .report_tunnel_stats(1_000_000, 500_000, Some(18))
+        .expect("report stats");
+    println!(
+        "stats reported: latency={}ms duration={}s (rates 0 on first sample)",
+        stats.latency_ms, stats.duration_seconds
+    );
+
     client.disconnect().expect("disconnect");
     println!("disconnected, state={}", client.state());
 }

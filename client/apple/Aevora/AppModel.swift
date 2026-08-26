@@ -23,8 +23,9 @@ final class AppModel: ObservableObject {
     @Published var durationSeconds: Int = 0
     @Published var lastError: String?
 
-    // Live stats are sourced from the extension (see README "connection
-    // statistics"); shown as "—" until wired, never faked.
+    // Real stats: download/upload/duration come from the core, computed from the
+    // OS tunnel's byte counters. Latency stays "—" until an in-tunnel probe is
+    // added (WireGuard exposes no RTT); it is never faked.
     @Published var latencyText: String = "—"
     @Published var downloadText: String = "—"
     @Published var uploadText: String = "—"
@@ -33,6 +34,7 @@ final class AppModel: ObservableObject {
     private let vpn = VPNController()
     private var connectedAt: Date?
     private var timer: Timer?
+    private var tickCount = 0
 
     init() {
         client = AevoraClient(baseUrl: AppConfig.controlURL)
@@ -138,14 +140,37 @@ final class AppModel: ObservableObject {
         if let start = connectedAt {
             durationSeconds = Int(Date().timeIntervalSince(start))
         }
-        // Keep the lease alive (renew) roughly every 30s.
-        if durationSeconds % 30 == 0 {
-            run { try self.client.keepAlive() } then: {}
+        // Every 3s, fetch the real tunnel counters and feed them to the core,
+        // which computes download/upload rates and renews the lease.
+        tickCount += 1
+        if tickCount % 3 == 0 {
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self, let (rx, tx) = await self.vpn.fetchTunnelStats() else { return }
+                if let stats = try? self.client.reportTunnelStats(rxBytes: rx, txBytes: tx, latencyMs: nil) {
+                    await MainActor.run { self.applyStats(stats) }
+                }
+            }
         }
+    }
+
+    private func applyStats(_ s: FfiStats) {
+        downloadText = Self.formatRate(s.downloadBps)
+        uploadText = Self.formatRate(s.uploadBps)
+        latencyText = s.latencyMs > 0 ? "\(s.latencyMs) ms" : "—"
+    }
+
+    /// Formats a byte/s rate for display (Mbps for consumer feel, KB/s when small).
+    static func formatRate(_ bytesPerSec: UInt64) -> String {
+        let mbps = Double(bytesPerSec) * 8 / 1_000_000
+        if mbps >= 1 { return String(format: "%.1f Mbps", mbps) }
+        let kbps = Double(bytesPerSec) / 1024
+        return String(format: "%.0f KB/s", kbps)
     }
 
     private func stopTimer() {
         timer?.invalidate(); timer = nil; connectedAt = nil; durationSeconds = 0
+        tickCount = 0
+        downloadText = "—"; uploadText = "—"; latencyText = "—"
     }
 
     // MARK: Core call helpers (the core is blocking; run off the main thread)

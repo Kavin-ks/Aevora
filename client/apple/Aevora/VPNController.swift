@@ -62,6 +62,38 @@ final class VPNController {
 
     var status: NEVPNStatus { manager?.connection.status ?? .invalid }
 
+    /// Asks the extension for the tunnel's cumulative byte counters (real
+    /// WireGuard rx/tx from `getRuntimeConfiguration`, in UAPI format). Returns
+    /// nil if unavailable.
+    func fetchTunnelStats() async -> (rx: UInt64, tx: UInt64)? {
+        guard let session = manager?.connection as? NETunnelProviderSession,
+              let request = "stats".data(using: .utf8) else { return nil }
+        return await withCheckedContinuation { cont in
+            do {
+                try session.sendProviderMessage(request) { data in
+                    guard let data, let text = String(data: data, encoding: .utf8) else {
+                        cont.resume(returning: nil); return
+                    }
+                    cont.resume(returning: Self.parseWgStats(text))
+                }
+            } catch {
+                cont.resume(returning: nil)
+            }
+        }
+    }
+
+    /// Sums rx_bytes/tx_bytes across peers from WireGuard's UAPI runtime config.
+    static func parseWgStats(_ uapi: String) -> (rx: UInt64, tx: UInt64) {
+        var rx: UInt64 = 0, tx: UInt64 = 0
+        for line in uapi.split(separator: "\n") {
+            let kv = line.split(separator: "=", maxSplits: 1)
+            guard kv.count == 2 else { continue }
+            if kv[0] == "rx_bytes", let v = UInt64(kv[1]) { rx += v }
+            if kv[0] == "tx_bytes", let v = UInt64(kv[1]) { tx += v }
+        }
+        return (rx, tx)
+    }
+
     @objc private func statusChanged(_ note: Notification) {
         let status = self.manager?.connection.status ?? .invalid
         DispatchQueue.main.async { self.onStatusChange?(status) }

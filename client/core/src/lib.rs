@@ -16,7 +16,7 @@ pub mod state;
 pub mod transport;
 pub mod tunnel;
 
-pub use client::{ConnectionSummary, Session, VpnClient};
+pub use client::{ConnectionStats, ConnectionSummary, Session, VpnClient};
 pub use error::{CoreError, Result};
 pub use keys::KeyPair;
 pub use model::{Location, Server};

@@ -142,6 +142,26 @@ pub struct FfiConnection {
     pub config: FfiTunnelConfig,
 }
 
+/// Live connection statistics (real measurements from the OS tunnel).
+#[derive(uniffi::Record)]
+pub struct FfiStats {
+    pub download_bps: u64,
+    pub upload_bps: u64,
+    pub latency_ms: u32,
+    pub duration_seconds: u64,
+}
+
+impl From<crate::ConnectionStats> for FfiStats {
+    fn from(s: crate::ConnectionStats) -> Self {
+        FfiStats {
+            download_bps: s.download_bps,
+            upload_bps: s.upload_bps,
+            latency_ms: s.latency_ms,
+            duration_seconds: s.duration_seconds,
+        }
+    }
+}
+
 /// The connection state for the UI.
 #[derive(uniffi::Enum)]
 pub enum FfiState {
@@ -243,6 +263,17 @@ impl AevoraClient {
     /// Renews the lease / reports stats while connected.
     pub fn keep_alive(&self) -> Result<(), FfiError> {
         Ok(self.inner.keep_alive()?)
+    }
+
+    /// Feeds the OS tunnel's cumulative byte counters (and optional measured
+    /// latency), computes real rates, renews the lease, and returns live stats.
+    pub fn report_tunnel_stats(&self, rx_bytes: u64, tx_bytes: u64, latency_ms: Option<u32>) -> Result<FfiStats, FfiError> {
+        Ok(self.inner.report_tunnel_stats(rx_bytes, tx_bytes, latency_ms)?.into())
+    }
+
+    /// Returns the current live statistics for the UI.
+    pub fn current_stats(&self) -> FfiStats {
+        self.inner.current_stats().into()
     }
 
     /// The current connection state.

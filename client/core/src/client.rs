@@ -4,6 +4,7 @@
 //! the OS tunnel to a `TunnelProvider`.
 
 use std::sync::Mutex;
+use std::time::Instant;
 
 use crate::api::ApiClient;
 use crate::error::{CoreError, Result};
@@ -42,6 +43,32 @@ struct Inner {
     state: ConnectionState,
     active_connection_id: Option<String>,
     current_server: Option<Server>,
+
+    // Live statistics, computed from the platform's tunnel byte counters.
+    connected_at: Option<Instant>,
+    last_sample: Option<(u64, u64, Instant)>, // (rx_bytes, tx_bytes, at)
+    download_bps: u64,                          // bytes/sec
+    upload_bps: u64,                            // bytes/sec
+    latency_ms: u32,                            // 0 = unknown
+}
+
+/// Live connection statistics for the UI. Rates are bytes per second; duration
+/// is seconds since the tunnel came up. Values are real measurements fed from
+/// the OS tunnel — never simulated.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ConnectionStats {
+    pub download_bps: u64,
+    pub upload_bps: u64,
+    pub latency_ms: u32,
+    pub duration_seconds: u64,
+}
+
+/// Computes a byte-rate from cumulative counters. Guards counter resets.
+fn rate(prev: u64, cur: u64, dt_secs: f64) -> u64 {
+    if dt_secs <= 0.0 || cur < prev {
+        return 0;
+    }
+    ((cur - prev) as f64 / dt_secs) as u64
 }
 
 pub struct VpnClient {
@@ -63,6 +90,11 @@ impl VpnClient {
                 state: ConnectionState::Disconnected,
                 active_connection_id: None,
                 current_server: None,
+                connected_at: None,
+                last_sample: None,
+                download_bps: 0,
+                upload_bps: 0,
+                latency_ms: 0,
             }),
         }
     }
@@ -173,11 +205,16 @@ impl VpnClient {
     }
 
     /// Marks the tunnel fully established (called by the platform once its native
-    /// VPN provider reports the tunnel is up).
+    /// VPN provider reports the tunnel is up). Resets the statistics baseline.
     pub fn mark_connected(&self) {
         let mut inner = self.inner.lock().unwrap();
         if inner.state.can_transition_to(&ConnectionState::Connected) {
             inner.state = ConnectionState::Connected;
+            inner.connected_at = Some(Instant::now());
+            inner.last_sample = None;
+            inner.download_bps = 0;
+            inner.upload_bps = 0;
+            inner.latency_ms = 0;
         }
     }
 
@@ -216,7 +253,59 @@ impl VpnClient {
         inner.state = ConnectionState::Disconnected;
         inner.active_connection_id = None;
         inner.current_server = None;
+        inner.connected_at = None;
+        inner.last_sample = None;
+        inner.download_bps = 0;
+        inner.upload_bps = 0;
+        inner.latency_ms = 0;
         Ok(())
+    }
+
+    /// Feeds the OS tunnel's cumulative byte counters (and optionally a measured
+    /// latency) so the core can compute real download/upload rates, and renews
+    /// the lease (reporting the rates to the control plane). Call periodically
+    /// while connected. Returns the freshly computed stats.
+    pub fn report_tunnel_stats(&self, rx_bytes: u64, tx_bytes: u64, latency_ms: Option<u32>) -> Result<ConnectionStats> {
+        let (connection_id, report) = {
+            let mut inner = self.inner.lock().unwrap();
+            if !inner.state.is_connected() {
+                return Ok(ConnectionStats::default());
+            }
+            let now = Instant::now();
+            if let Some((prx, ptx, at)) = inner.last_sample {
+                let dt = now.duration_since(at).as_secs_f64();
+                inner.download_bps = rate(prx, rx_bytes, dt);
+                inner.upload_bps = rate(ptx, tx_bytes, dt);
+            }
+            inner.last_sample = Some((rx_bytes, tx_bytes, now));
+            if let Some(l) = latency_ms {
+                inner.latency_ms = l;
+            }
+            let report = StatsReport {
+                rx_bps: (inner.download_bps as i64) * 8, // report bits/sec upstream
+                tx_bps: (inner.upload_bps as i64) * 8,
+                latency_ms: inner.latency_ms as i64,
+            };
+            (inner.active_connection_id.clone(), report)
+        };
+
+        if let Some(id) = connection_id {
+            // Renew the lease and report stats; ignore transient failures here so
+            // stats keep flowing to the UI even if a single renew hiccups.
+            let _ = self.authed(|access| self.api.stats(access, &id, &report));
+        }
+        Ok(self.current_stats())
+    }
+
+    /// Returns the current live statistics for the UI.
+    pub fn current_stats(&self) -> ConnectionStats {
+        let inner = self.inner.lock().unwrap();
+        ConnectionStats {
+            download_bps: inner.download_bps,
+            upload_bps: inner.upload_bps,
+            latency_ms: inner.latency_ms,
+            duration_seconds: inner.connected_at.map(|t| t.elapsed().as_secs()).unwrap_or(0),
+        }
     }
 
     /// Keep-alive: renews the lease (and reports stats) while connected.
@@ -383,6 +472,32 @@ mod tests {
         // And disconnect still releases the lease recorded during prepare.
         client.disconnect().unwrap();
         assert_eq!(client.state(), ConnectionState::Disconnected);
+    }
+
+    #[test]
+    fn rate_computes_and_guards() {
+        assert_eq!(rate(0, 1000, 1.0), 1000);
+        assert_eq!(rate(1000, 3000, 2.0), 1000);
+        assert_eq!(rate(5000, 0, 1.0), 0); // counter reset guarded
+        assert_eq!(rate(0, 1000, 0.0), 0); // zero dt guarded
+    }
+
+    #[test]
+    fn report_stats_is_noop_when_disconnected() {
+        let client = VpnClient::new("http://cp", Box::new(scripted()), Box::new(FakeProvider::default()));
+        let s = client.report_tunnel_stats(100, 200, Some(20)).unwrap();
+        assert_eq!(s, ConnectionStats::default());
+    }
+
+    #[test]
+    fn stats_track_duration_after_connect() {
+        let client = VpnClient::new("http://cp", Box::new(scripted()), Box::new(FakeProvider::default()));
+        client.enroll("inv", "a@b.co", None, "l", "macos").unwrap();
+        client.connect("de").unwrap();
+        // Fresh connection: rates zero, duration defined (>=0), latency unknown.
+        let s = client.current_stats();
+        assert_eq!(s.download_bps, 0);
+        assert_eq!(s.latency_ms, 0);
     }
 
     #[test]
