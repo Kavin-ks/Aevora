@@ -1,5 +1,33 @@
 import Foundation
 import aevora_core
+#if os(iOS)
+import UIKit
+#endif
+
+// MARK: - Platform
+//
+// The one place OS differences for identity are expressed; the rest of the app
+// is shared between macOS and iOS.
+
+enum Platform {
+    /// Platform tag sent at enrollment (matches the control plane's allowed set).
+    static var tag: String {
+        #if os(iOS)
+        return "ios"
+        #else
+        return "macos"
+        #endif
+    }
+
+    /// A human-readable device name for enrollment.
+    static var deviceName: String {
+        #if os(iOS)
+        return UIDevice.current.name
+        #else
+        return Host.current().localizedName ?? "Mac"
+        #endif
+    }
+}
 
 // MARK: - Configuration
 //

@@ -45,7 +45,7 @@ private struct EnrollView: View {
             TextField("Invite code", text: $invite).textFieldStyle(.roundedBorder)
             TextField("Email", text: $email).textFieldStyle(.roundedBorder)
             Button("Enroll") {
-                model.enroll(invite: invite, email: email, deviceName: Host.current().localizedName ?? "Mac")
+                model.enroll(invite: invite, email: email, deviceName: Platform.deviceName)
             }
             .buttonStyle(.borderedProminent).tint(Theme.accent)
             .disabled(invite.isEmpty || email.isEmpty)

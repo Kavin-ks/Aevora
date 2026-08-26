@@ -55,7 +55,7 @@ final class AppModel: ObservableObject {
         run {
             let session = try self.client.enroll(
                 inviteCode: invite, email: email, displayName: nil,
-                deviceName: deviceName, platform: "macos")
+                deviceName: deviceName, platform: Platform.tag)
             SessionStore.save(session)
         } then: {
             self.phase = .disconnected

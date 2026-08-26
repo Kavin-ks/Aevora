@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Install a packet-tunnel VPN. Requires the Network Extensions capability
+         on the App ID (Apple Developer account). iOS has no app-sandbox key. -->
+    <key>com.apple.developer.networking.networkextension</key>
+    <array>
+        <string>packet-tunnel-provider</string>
+    </array>
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.com.aevora.Aevora</string>
+    </array>
+    <key>keychain-access-groups</key>
+    <array>
+        <string>$(AppIdentifierPrefix)com.aevora.Aevora</string>
+    </array>
+</dict>
+</plist>

@@ -47,7 +47,7 @@ open Aevora.xcodeproj     # 3. open in Xcode
 
 In Xcode, before running:
 
-1. **Signing** — select your Team for both the `Aevora` and `PacketTunnel`
+1. **Signing** — select your Team for the `Aevora-macOS` and `PacketTunnel-macOS`
    targets (or set `DEVELOPMENT_TEAM` in `project.yml` / an untracked xcconfig).
 2. **Capabilities / App ID** — on the Apple Developer portal (or via automatic
    signing) enable **Network Extensions**, **App Groups**
@@ -58,7 +58,7 @@ In Xcode, before running:
 3. **Control-plane URL** — set `AEVORA_CONTROL_URL` (build setting) to your
    control plane, e.g. a staging URL or, for local testing, a reachable address
    of your dev `controld`. It is **not** hardcoded in source.
-4. Run the `Aevora` scheme. macOS will prompt to **allow the VPN
+4. Run the `Aevora-macOS` scheme. macOS will prompt to **allow the VPN
    configuration** the first time — approve it.
 
 Then in the app: enter an invite code + email → **Enroll** → pick a country →
@@ -74,12 +74,22 @@ running the node agent, not the dev-seed placeholder.
 
 ## iOS
 
-iOS uses the **same** Swift sources and the same `PacketTunnelProvider`
-(NEPacketTunnelProvider is identical on iOS). To add it, duplicate the two
-targets in `project.yml` with `platform: iOS` (the xcframework already includes
-iOS device + simulator slices from `build-core.sh`). The only differences are
-the deployment target and that iOS always requires a provisioning profile with
-the Network Extensions entitlement. No app logic changes — the core is shared.
+iOS is a **first-class target** in `project.yml` (`Aevora-iOS` +
+`PacketTunnel-iOS`). It reuses the **same** SwiftUI sources, the same
+`PacketTunnelProvider` (NEPacketTunnelProvider is identical on iOS), the same
+`aevora-core` (the xcframework includes iOS device + simulator slices from
+`build-core.sh`), and the same world map (iOS 17+). Platform differences are
+isolated to `Platform` in `Support.swift` (`UIDevice` vs `Host`) and to the iOS
+entitlements (`*-iOS.entitlements`, no macOS app-sandbox keys).
+
+```bash
+./build-core.sh && xcodegen generate && open Aevora.xcodeproj
+```
+
+Select the `Aevora-iOS` scheme, set your Team, and run on a device or simulator.
+iOS requires a provisioning profile with the **Network Extensions** entitlement
+(a paid Apple Developer account). No app logic differs from macOS — the core and
+UI are shared.
 
 ## Connection statistics
 

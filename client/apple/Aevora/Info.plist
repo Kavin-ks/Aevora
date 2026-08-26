@@ -6,5 +6,8 @@
          endpoint is hardcoded in source. Set it per configuration (Debug/Release). -->
     <key>AEVORA_CONTROL_URL</key>
     <string>$(AEVORA_CONTROL_URL)</string>
+    <!-- iOS launch screen (ignored on macOS). -->
+    <key>UILaunchScreen</key>
+    <dict/>
 </dict>
 </plist>
