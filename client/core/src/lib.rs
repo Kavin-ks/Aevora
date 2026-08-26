@@ -32,3 +32,6 @@ mod ffi;
 
 #[cfg(feature = "ffi")]
 uniffi::setup_scaffolding!();
+
+#[cfg(feature = "capi")]
+mod capi;

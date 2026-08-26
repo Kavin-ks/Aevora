@@ -1,0 +1,78 @@
+<Window x:Class="Aevora.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Aevora" Height="680" Width="460" Background="#FAFBFC">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </Window.Resources>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
+            <TextBlock Text="Aevora" FontSize="28" FontWeight="Bold"/>
+            <TextBlock Text="•" FontSize="28" FontWeight="Bold" Foreground="{StaticResource AevoraTeal}" Margin="4,0,0,0"/>
+        </StackPanel>
+
+        <!-- Enroll -->
+        <StackPanel Grid.Row="1" VerticalAlignment="Top" Width="320"
+                    Visibility="{Binding IsEnrolled, Converter={StaticResource InverseBoolToVis}}"
+                    x:Name="EnrollPanel">
+            <TextBlock Text="Enroll this device" FontWeight="SemiBold" Margin="0,20,0,8"/>
+            <TextBox x:Name="InviteBox" Margin="0,0,0,8"/>
+            <TextBlock Text="Invite code" FontSize="10" Foreground="Gray" Margin="0,-6,0,6"/>
+            <TextBox x:Name="EmailBox" Margin="0,0,0,8"/>
+            <TextBlock Text="Email" FontSize="10" Foreground="Gray" Margin="0,-6,0,6"/>
+            <Button Content="Enroll" Click="OnEnroll" Background="{StaticResource AevoraTeal}" Foreground="White" Height="36"/>
+        </StackPanel>
+
+        <!-- Main -->
+        <StackPanel Grid.Row="1" x:Name="MainPanel"
+                    Visibility="{Binding IsEnrolled, Converter={StaticResource BoolToVis}}">
+            <Border BorderBrush="#22000000" BorderThickness="1" CornerRadius="10" Height="200" Margin="0,0,0,14">
+                <Canvas x:Name="MapCanvas" ClipToBounds="True"/>
+            </Border>
+
+            <Border Background="#0C000000" CornerRadius="12" Padding="16">
+                <StackPanel>
+                    <TextBlock Text="{Binding StateText}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding ServerName}" HorizontalAlignment="Center" Foreground="#555" Margin="0,2,0,10"/>
+                    <Button x:Name="ConnectButton" Click="OnConnectToggle" Height="46"
+                            Background="{StaticResource AevoraTeal}" Foreground="White" Content="Connect"/>
+                    <Grid Margin="0,10,0,0" Visibility="{Binding IsConnected, Converter={StaticResource BoolToVis}}">
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                        <TextBlock Text="Duration" Foreground="#666" Grid.Row="0" Grid.Column="0"/>
+                        <TextBlock Text="{Binding Duration}" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right"/>
+                        <TextBlock Text="Latency" Foreground="#666" Grid.Row="1" Grid.Column="0"/>
+                        <TextBlock Text="{Binding Latency}" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"/>
+                        <TextBlock Text="Download" Foreground="#666" Grid.Row="2" Grid.Column="0"/>
+                        <TextBlock Text="{Binding Download}" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"/>
+                        <TextBlock Text="Upload" Foreground="#666" Grid.Row="3" Grid.Column="0"/>
+                        <TextBlock Text="{Binding Upload}" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="Locations" FontWeight="SemiBold" Margin="0,14,0,4"/>
+            <ListBox x:Name="LocationsList" Height="180"
+                     ItemsSource="{Binding Locations}" SelectionChanged="OnLocationSelected">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel>
+                            <TextBlock Text="{Binding Country}"/>
+                            <TextBlock DockPanel.Dock="Right" Text="unavailable" Foreground="#999" FontSize="10"
+                                       HorizontalAlignment="Right"
+                                       Visibility="{Binding Available, Converter={StaticResource InverseBoolToVis}}"/>
+                        </DockPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+
+        <TextBlock Grid.Row="2" Text="{Binding Error}" Foreground="#C0392B" TextWrapping="Wrap" Margin="0,10,0,0"/>
+    </Grid>
+</Window>

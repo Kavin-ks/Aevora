@@ -66,6 +66,11 @@ client/android/app/src/main/java/uniffi/
 .gradle/
 **/build/
 client/android/local.properties
+# .NET / Windows build outputs + native DLLs
+client/windows/Aevora/native/
+**/bin/
+**/obj/
+*.dll
 control-plane/aevora-controld
 agent/aevora-agent
 *.test

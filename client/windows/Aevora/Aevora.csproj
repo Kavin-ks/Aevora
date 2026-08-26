@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Aevora</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ServiceController for install/start/stop; ProtectedData for DPAPI. -->
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Native DLLs (git-ignored): aevora_core.dll (build-core.ps1), plus
+         tunnel.dll + wireguard.dll from WireGuard for Windows. -->
+    <None Include="native\*.dll" Condition="Exists('native')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

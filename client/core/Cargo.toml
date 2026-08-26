@@ -26,6 +26,8 @@ default = []
 net = ["dep:ureq"]
 # `ffi` adds UniFFI bindings (Swift/Kotlin) and the built-in HTTP transport.
 ffi = ["dep:uniffi", "net"]
+# `capi` adds a C ABI (for Windows/.NET via P/Invoke) + the built-in transport.
+capi = ["net"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

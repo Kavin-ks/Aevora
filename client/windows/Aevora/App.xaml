@@ -1,0 +1,9 @@
+<Application x:Class="Aevora.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Aevora">
+    <Application.Resources>
+        <SolidColorBrush x:Key="AevoraTeal" Color="#0C9E90"/>
+        <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis"/>
+    </Application.Resources>
+</Application>
