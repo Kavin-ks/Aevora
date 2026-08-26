@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/aevora/control-plane/internal/auth"
+	"github.com/aevora/control-plane/internal/metrics"
 	"github.com/aevora/control-plane/internal/store"
 )
 
@@ -38,6 +39,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	userID, hash, status, err := s.store.GetCredentialsByEmail(r.Context(), req.Email)
 	// Generic error to avoid user enumeration / distinguishing "no password".
 	if errors.Is(err, store.ErrNotFound) || (err == nil && hash == "") {
+		metrics.Auth("failure")
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
@@ -51,9 +53,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if auth.VerifyPassword(req.Password, hash) != nil {
+		metrics.Auth("failure")
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
+	metrics.Auth("success")
 
 	access, err := s.issueAccess(userID)
 	if err != nil {

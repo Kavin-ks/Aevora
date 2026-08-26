@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aevora/control-plane/internal/auth"
+	"github.com/aevora/control-plane/internal/metrics"
 	"github.com/aevora/control-plane/internal/model"
 	"github.com/aevora/control-plane/internal/ratelimit"
 )
@@ -85,6 +86,7 @@ func (s *Server) Limiter() *ratelimit.Limiter { return s.authLimiter }
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", s.handleHealth)
+	mux.Handle("GET /metrics", metrics.Handler()) // isolate on an internal network in prod
 	mux.HandleFunc("GET /v1/locations", s.handleLocations)
 
 	// Identity (user-facing + admin invite minting). Auth endpoints are

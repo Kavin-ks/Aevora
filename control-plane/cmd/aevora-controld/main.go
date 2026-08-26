@@ -13,6 +13,7 @@ import (
 
 	"github.com/aevora/control-plane/internal/api"
 	"github.com/aevora/control-plane/internal/config"
+	"github.com/aevora/control-plane/internal/metrics"
 	"github.com/aevora/control-plane/internal/store"
 )
 
@@ -140,6 +141,12 @@ func runReaper(ctx context.Context, st *store.Store, interval, ttl time.Duration
 				}
 			} else if n > 0 {
 				log.Info("reaper expired leases on unhealthy gateways (failover)", "count", n)
+			}
+			// Refresh fleet metrics from a periodic snapshot.
+			if byStatus, active, err := st.FleetSnapshot(ctx); err == nil {
+				metrics.UpdateFleet(byStatus, active)
+			} else if ctx.Err() == nil {
+				log.Error("reaper: metrics snapshot", "err", err)
 			}
 		}
 	}

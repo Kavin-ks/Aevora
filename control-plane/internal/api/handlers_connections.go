@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aevora/control-plane/internal/auth"
+	"github.com/aevora/control-plane/internal/metrics"
 	"github.com/aevora/control-plane/internal/model"
 	"github.com/aevora/control-plane/internal/store"
 )
@@ -59,17 +60,21 @@ func (s *Server) handleConnectionCreate(w http.ResponseWriter, r *http.Request) 
 	case errors.Is(err, store.ErrDeviceNotFound):
 		writeError(w, http.StatusNotFound, "device not found or revoked")
 		return
-	case errors.Is(err, store.ErrNoGatewayAvailable):
-		writeError(w, http.StatusServiceUnavailable, "no healthy gateway available in that location")
-		return
-	case errors.Is(err, store.ErrGatewayFull):
-		writeError(w, http.StatusServiceUnavailable, "selected gateway is at capacity, try again")
+	case errors.Is(err, store.ErrNoGatewayAvailable), errors.Is(err, store.ErrGatewayFull):
+		metrics.ConnFailed("no_gateway")
+		msg := "no healthy gateway available in that location"
+		if errors.Is(err, store.ErrGatewayFull) {
+			msg = "selected gateway is at capacity, try again"
+		}
+		writeError(w, http.StatusServiceUnavailable, msg)
 		return
 	case err != nil:
+		metrics.ConnFailed("error")
 		s.log.Error("create connection", "err", err)
 		writeError(w, http.StatusInternalServerError, "could not create connection")
 		return
 	}
+	metrics.ConnCreated()
 
 	writeJSON(w, http.StatusCreated, connectionResponse{
 		ConnectionID: conn.ID,

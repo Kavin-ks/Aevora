@@ -16,12 +16,14 @@ import (
 
 	"github.com/aevora/agent/internal/cp"
 	"github.com/aevora/agent/internal/reconcile"
+	"github.com/aevora/agent/internal/sysload"
 	"github.com/aevora/agent/internal/wg"
 )
 
 type config struct {
 	controlURL       string
 	iface            string
+	wanIface         string
 	tokenFile        string
 	enrollmentSecret string
 	syncInterval     time.Duration
@@ -40,6 +42,7 @@ func run(log *slog.Logger) error {
 	cfg := loadConfig()
 	client := cp.New(cfg.controlURL)
 	iface := wg.New(cfg.iface)
+	meter := sysload.New(cfg.wanIface)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -66,7 +69,7 @@ func run(log *slog.Logger) error {
 			dcancel()
 			return nil
 		case <-ticker.C:
-			if err := syncOnce(ctx, log, client, iface, token); err != nil {
+			if err := syncOnce(ctx, log, client, iface, meter, token); err != nil {
 				log.Error("sync", "err", err)
 			}
 		}
@@ -74,12 +77,18 @@ func run(log *slog.Logger) error {
 }
 
 // syncOnce heartbeats current load and reconciles peers to the desired set.
-func syncOnce(ctx context.Context, log *slog.Logger, client *cp.Client, iface *wg.Runner, token string) error {
+func syncOnce(ctx context.Context, log *slog.Logger, client *cp.Client, iface *wg.Runner, meter *sysload.Meter, token string) error {
 	current, err := iface.ListPeers()
 	if err != nil {
 		return err
 	}
-	if err := client.Heartbeat(ctx, token, cp.Metrics{ActivePeers: len(current)}); err != nil {
+	load := meter.Sample()
+	if err := client.Heartbeat(ctx, token, cp.Metrics{
+		ActivePeers: len(current),
+		CPUPct:      load.CPUPct,
+		RxBps:       load.RxBps,
+		TxBps:       load.TxBps,
+	}); err != nil {
 		return err
 	}
 	desired, err := client.Peers(ctx, token)
@@ -126,6 +135,7 @@ func loadConfig() config {
 	return config{
 		controlURL:       getenv("AEVORA_CONTROL_URL", "http://127.0.0.1:8080"),
 		iface:            getenv("AEVORA_WG_INTERFACE", "wg0"),
+		wanIface:         getenv("AEVORA_WAN_INTERFACE", "eth0"),
 		tokenFile:        getenv("AEVORA_NODE_TOKEN_FILE", "/etc/aevora/node.token"),
 		enrollmentSecret: os.Getenv("AEVORA_ENROLLMENT_SECRET"),
 		syncInterval:     getdur("AEVORA_SYNC_INTERVAL", 3*time.Second),
