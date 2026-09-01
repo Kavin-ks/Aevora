@@ -8,6 +8,10 @@ private let countryFlags: [String: String] = [
     "se": "🇸🇪", "jp": "🇯🇵", "sg": "🇸🇬", "au": "🇦🇺", "ca": "🇨🇦",
     "br": "🇧🇷", "in": "🇮🇳", "ae": "🇦🇪", "za": "🇿🇦", "ch": "🇨🇭",
     "no": "🇳🇴", "dk": "🇩🇰", "fi": "🇫🇮", "es": "🇪🇸", "it": "🇮🇹",
+    "kr": "🇰🇷", "pl": "🇵🇱", "mx": "🇲🇽", "hk": "🇭🇰", "nz": "🇳🇿",
+    "at": "🇦🇹", "pt": "🇵🇹", "ro": "🇷🇴", "tr": "🇹🇷", "ua": "🇺🇦",
+    "th": "🇹🇭", "id": "🇮🇩", "my": "🇲🇾", "ph": "🇵🇭", "tw": "🇹🇼",
+    "ar": "🇦🇷", "cl": "🇨🇱", "co": "🇨🇴", "ke": "🇰🇪", "ng": "🇳🇬",
 ]
 private let countryTaglines: [String: String] = [
     "us": "Ultra-fast • Tier-1 backbone",
@@ -16,14 +20,24 @@ private let countryTaglines: [String: String] = [
     "fr": "Premium • Paris datacenter",
     "nl": "Peering hub • AMS-IX",
     "se": "GDPR-strong • Nordic privacy",
+    "no": "Nordic privacy laws • Oslo",
+    "fi": "Zero-log jurisdiction • Helsinki",
+    "ch": "Swiss privacy law • Zurich",
     "jp": "Asia gateway • Low-latency",
-    "sg": "Asia-Pacific hub",
+    "kr": "Korea • Lightning-fast fiber",
+    "sg": "Asia-Pacific hub • Singapore",
+    "hk": "Asia hub • Hong Kong",
     "au": "Oceania • Sydney core",
+    "nz": "New Zealand • Clean slate",
     "ca": "North America • No 5-eyes risk",
+    "mx": "Latin America • Mexico City",
     "br": "South America • São Paulo",
     "in": "South Asia • Mumbai core",
     "ae": "Middle East • Dubai hub",
     "za": "Africa • Johannesburg",
+    "it": "Mediterranean • Milan",
+    "es": "Iberian • Madrid",
+    "pl": "Eastern EU • Warsaw",
 ]
 private func flag(_ code: String) -> String { countryFlags[code.lowercased()] ?? "🌐" }
 private func tagline(_ code: String) -> String { countryTaglines[code.lowercased()] ?? "VPN server" }
@@ -345,7 +359,6 @@ private struct StatsBar: View {
 // ─────────────────────────────────────────────
 private struct CountryGrid: View {
     @EnvironmentObject var model: AppModel
-    @State private var isRefreshing = false
 
     private let columns = [
         GridItem(.adaptive(minimum: 140, maximum: 180), spacing: 10)
@@ -356,18 +369,21 @@ private struct CountryGrid: View {
             HStack {
                 Text("Server Locations")
                     .font(.subheadline.weight(.semibold))
+                Text("· \(model.locations.filter(\.available).count) available")
+                    .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button {
-                    isRefreshing = true
                     model.loadLocations()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { isRefreshing = false }
                 } label: {
                     Image(systemName: "arrow.clockwise")
-                        .rotationEffect(.degrees(isRefreshing ? 360 : 0))
-                        .animation(isRefreshing ? .linear(duration: 0.7).repeatForever(autoreverses: false) : .default,
-                                   value: isRefreshing)
+                        .rotationEffect(.degrees(model.isLoadingLocations ? 360 : 0))
+                        .animation(model.isLoadingLocations
+                            ? .linear(duration: 0.6).repeatForever(autoreverses: false)
+                            : .default,
+                            value: model.isLoadingLocations)
                 }
                 .buttonStyle(.borderless)
+                .disabled(model.isLoadingLocations)
                 .help("Refresh locations")
             }
 

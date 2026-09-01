@@ -30,6 +30,7 @@ final class AppModel: ObservableObject {
     @Published var latencyText: String = "—"
     @Published var downloadText: String = "—"
     @Published var uploadText: String = "—"
+    @Published var isLoadingLocations: Bool = false
 
     private let client: AevoraClient
     private let vpn = VPNController()
@@ -65,10 +66,14 @@ final class AppModel: ObservableObject {
     }
 
     func loadLocations() {
+        guard !isLoadingLocations else { return }
+        isLoadingLocations = true
+        lastError = nil
         run {
             try self.client.locations()
         } thenValue: { locs in
-            self.locations = locs
+            self.locations = locs.sorted { $0.country < $1.country }
+            self.isLoadingLocations = false
         }
     }
 
