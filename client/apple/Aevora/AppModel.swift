@@ -1,6 +1,7 @@
 import Foundation
 import NetworkExtension
-import aevora_core
+// aevora_core types are compiled as part of this module (build/Generated/aevora_core.swift)
+// — no separate import needed.
 
 /// The app's view model. It owns the shared `AevoraClient` (all API/auth/session/
 /// key/selection logic) and the `VPNController` (native tunnel), and exposes a

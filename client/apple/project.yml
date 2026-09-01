@@ -26,8 +26,10 @@ settings:
 
 packages:
   WireGuardKit:
-    url: https://github.com/WireGuard/wireguard-apple.git
-    branch: master
+    # Local fork with swift-tools-version:5.9 + pre-built WireGuardKitGo xcframework.
+    # Fixes "v12/v15 is unavailable" error under Xcode 26.x.
+    # Regenerate WireGuardKitGo.xcframework: cd client/apple && ./build-wg-go.sh
+    path: Packages/WireGuardKit
 
 targets:
   # ---------------- macOS ----------------
@@ -58,6 +60,9 @@ targets:
         INFOPLIST_FILE: PacketTunnel/Info.plist
         CODE_SIGN_ENTITLEMENTS: PacketTunnel/PacketTunnel.entitlements
         ENABLE_HARDENED_RUNTIME: YES
+        # libwg-go.a is pre-built by build-wg-go.sh and stored per platform.
+        # Xcode passes LIBRARY_SEARCH_PATHS to the final link step for SPM deps too.
+        LIBRARY_SEARCH_PATHS: "$(inherited) $(SRCROOT)/Packages/WireGuardKit/prebuilt/macos"
     dependencies:
       - framework: build/AevoraCore.xcframework
         embed: false
@@ -91,6 +96,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.aevora.Aevora.PacketTunnel
         INFOPLIST_FILE: PacketTunnel/Info.plist
         CODE_SIGN_ENTITLEMENTS: PacketTunnel/PacketTunnel-iOS.entitlements
+        # For iOS device builds; simulator builds need the iossim/ variant —
+        # override LIBRARY_SEARCH_PATHS in a Debug/Release xcconfig if needed.
+        LIBRARY_SEARCH_PATHS: "$(inherited) $(SRCROOT)/Packages/WireGuardKit/prebuilt/ios"
     dependencies:
       - framework: build/AevoraCore.xcframework
         embed: false

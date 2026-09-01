@@ -1,6 +1,5 @@
 import Foundation
 import NetworkExtension
-import aevora_core
 
 /// Drives the system VPN via NetworkExtension. It installs an on-demand tunnel
 /// configuration pointing at our packet-tunnel extension, passes the WireGuard

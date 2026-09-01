@@ -1,6 +1,5 @@
 import SwiftUI
 import MapKit
-import aevora_core
 
 // The world map. Availability and the country list come from the control plane
 // (model.locations); only the on-map POSITION uses a static coordinate lookup,

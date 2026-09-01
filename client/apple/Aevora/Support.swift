@@ -1,5 +1,4 @@
 import Foundation
-import aevora_core
 #if os(iOS)
 import UIKit
 #endif

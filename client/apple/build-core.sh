@@ -30,7 +30,7 @@ xcodebuild -version >/dev/null 2>&1 || { echo "full Xcode required (xcode-select
 # shared codebase. Comment out the iOS lines to build macOS only.
 MAC_TARGETS=(aarch64-apple-darwin x86_64-apple-darwin)
 IOS_DEVICE=(aarch64-apple-ios)
-IOS_SIM=(aarch64-apple-ios-sim x86_64-apple-ios-sim)
+IOS_SIM=(aarch64-apple-ios-sim x86_64-apple-ios)
 ALL=("${MAC_TARGETS[@]}" "${IOS_DEVICE[@]}" "${IOS_SIM[@]}")
 
 echo "==> Ensuring rustup targets"

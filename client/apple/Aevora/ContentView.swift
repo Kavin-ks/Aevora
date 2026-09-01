@@ -1,5 +1,4 @@
 import SwiftUI
-import aevora_core
 
 // Consumer layout: Aevora wordmark, world map, a selected-country panel with a
 // large Connect/Disconnect button, connection state, and live stats. Original
