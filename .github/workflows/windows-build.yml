@@ -1,0 +1,107 @@
+name: Windows Client Build
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'client/windows/**'
+      - 'client/core/**'
+      - '.github/workflows/windows-build.yml'
+  workflow_dispatch:          # run manually from GitHub Actions tab
+    inputs:
+      control_url:
+        description: 'Control plane URL (e.g. https://aevora-control.onrender.com)'
+        required: false
+        default: 'https://aevora-control.onrender.com'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest   # real Windows Server runner, free on public repos
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (MSVC toolchain)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            client/core/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('client/core/Cargo.lock') }}
+
+      - name: Build Rust core DLL (C ABI)
+        working-directory: client/core
+        run: cargo build --release --features capi --target x86_64-pc-windows-msvc
+
+      - name: Copy core DLL to native folder
+        run: |
+          New-Item -ItemType Directory -Force "client\windows\Aevora\native"
+          Copy-Item "client\core\target\x86_64-pc-windows-msvc\release\aevora_core.dll" `
+                    "client\windows\Aevora\native\"
+
+      - name: Download WireGuardNT DLLs
+        run: |
+          # Download the official WireGuard for Windows installer and extract the DLLs
+          Invoke-WebRequest -Uri "https://download.wireguard.com/windows-client/wireguard-amd64-0.5.3.msi" `
+                            -OutFile "wireguard.msi"
+          Start-Process msiexec.exe -ArgumentList "/a wireguard.msi /qb TARGETDIR=$PWD\wg_extracted" -Wait
+          Copy-Item "wg_extracted\wireguard.dll" "client\windows\Aevora\native\"
+          Copy-Item "wg_extracted\tunnel.dll"    "client\windows\Aevora\native\"
+
+      - name: Set control plane URL in app config
+        run: |
+          $url = "${{ github.event.inputs.control_url || 'https://aevora-control.onrender.com' }}"
+          # Bake into a default appsettings so users don't need to set env var manually
+          $content = "{`"ControlUrl`": `"$url`"}"
+          Set-Content "client\windows\Aevora\appsettings.json" $content
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish Windows app (self-contained .exe)
+        working-directory: client/windows/Aevora
+        run: |
+          dotnet publish -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o publish\
+
+      - name: Package as zip
+        run: |
+          Compress-Archive -Path "client\windows\Aevora\publish\*" `
+                           -DestinationPath "Aevora-Windows-x64.zip"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aevora-Windows-x64
+          path: Aevora-Windows-x64.zip
+          retention-days: 30
+
+      - name: Create GitHub Release (on main push)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-latest
+          name: "Windows Client (latest)"
+          body: |
+            Latest Windows build.
+
+            **Setup:**
+            1. Extract the zip
+            2. Set `AEVORA_CONTROL_URL` in System Environment Variables to your control plane URL
+            3. Run `Aevora.exe` as **Administrator**
+            4. Enter your invite code on the enrollment screen
+          files: Aevora-Windows-x64.zip
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
