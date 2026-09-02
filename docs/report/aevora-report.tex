@@ -80,15 +80,20 @@
 
 %% ── TikZ style shortcuts ────────────────────────────────────
 \tikzset{
-  box/.style={rectangle, rounded corners=4pt, draw=#1!60, fill=#1!10,
-              text width=3.2cm, align=center, minimum height=1cm, font=\small},
-  wbox/.style={box=black!50},
-  bbox/.style={box=blue!70},
-  gbox/.style={box=green!60!black},
-  rbox/.style={box=red!60},
-  obox/.style={box=orange!70!black},
-  pbox/.style={box=purple!60},
-  tbox/.style={box=teal!60},
+  wbox/.style={rectangle, rounded corners=4pt, draw=gray!60, fill=gray!10,
+               text width=3.2cm, align=center, minimum height=1cm, font=\small},
+  bbox/.style={rectangle, rounded corners=4pt, draw=blue!60, fill=blue!10,
+               text width=3.2cm, align=center, minimum height=1cm, font=\small},
+  gbox/.style={rectangle, rounded corners=4pt, draw=green!60!black, fill=green!10,
+               text width=3.2cm, align=center, minimum height=1cm, font=\small},
+  rbox/.style={rectangle, rounded corners=4pt, draw=red!60, fill=red!10,
+               text width=3.2cm, align=center, minimum height=1cm, font=\small},
+  obox/.style={rectangle, rounded corners=4pt, draw=orange!70!black, fill=orange!10,
+               text width=3.2cm, align=center, minimum height=1cm, font=\small},
+  pbox/.style={rectangle, rounded corners=4pt, draw=purple!60, fill=purple!10,
+               text width=3.2cm, align=center, minimum height=1cm, font=\small},
+  tbox/.style={rectangle, rounded corners=4pt, draw=teal!60, fill=teal!10,
+               text width=3.2cm, align=center, minimum height=1cm, font=\small},
   arr/.style={-{Stealth[length=5pt]}, thick},
   darr/.style={{Stealth[length=5pt]}-{Stealth[length=5pt]}, thick, dashed},
   seqbox/.style={rectangle, draw=gray!60, fill=white,
@@ -609,18 +614,18 @@ Figure~\ref{fig:topology} shows how a connected client's traffic flows through t
     {\footnotesize Control Plane\\(TCP 8099)};
 
   % Internet (right)
-  \node[draw=gray!60, ellipse, text width=2.0cm, align=center,
-        font=\footnotesize] (inet2) at (10,0) {Public\\Internet};
+  \node[draw=gray!60, ellipse, text width=2.2cm, align=center,
+        font=\footnotesize] (inet2) at (10,0) {Public\\[2pt]Internet};
 
   % Destination
   \node[wbox, text width=2.0cm] (dest) at (10,-2.5) {\footnotesize Destination\\Server};
 
   % WireGuard tunnel (thick dashed)
-  \draw[red!70, thick, dashed, <->] (dev) -- node[above, font=\tiny]{WireGuard UDP/51820\\encrypted + authenticated} (gwnode);
+  \draw[red!70, thick, dashed, <->] (dev) -- node[above, font=\tiny, align=center]{WireGuard UDP/51820\\encrypted + authenticated} (gwnode);
 
   % Control API
   \draw[blue!50, arr] (dev) -- node[left, font=\tiny]{HTTPS} (cpnode);
-  \draw[green!60!black, arr] (gwnode) -- node[right, font=\tiny]{HTTPS\\(heartbeat)} (cpnode);
+  \draw[green!60!black, arr] (gwnode) -- node[right, font=\tiny, align=center]{HTTPS\\(heartbeat)} (cpnode);
 
   % Gateway to internet
   \draw[gray!70, arr] (gwnode) -- (inet2);
@@ -858,7 +863,7 @@ The next available IPv4 address in the gateway's \texttt{wg\_subnet\_v4} is foun
 
 On-device X25519 key generation uses the \texttt{x25519-dalek} Rust crate, seeded from the OS CSPRNG:
 
-\begin{lstlisting}[language=Rust, caption=On-device X25519 key generation (client/core/src/keys.rs)]
+\begin{lstlisting}[language=C, caption=On-device X25519 key generation (client/core/src/keys.rs)]
 pub fn generate() -> KeyPair {
     let secret = StaticSecret::random_from_rng(rand::rngs::OsRng);
     let public = PublicKey::from(&secret);
