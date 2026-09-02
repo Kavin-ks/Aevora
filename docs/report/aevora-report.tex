@@ -1,0 +1,1288 @@
+%% ============================================================
+%%  Aevora — A Multi-Platform WireGuard-Based VPN System
+%%  Computer Networks Mini-Project Report
+%%  SSN College of Engineering, Chennai  |  AY 2026–2027
+%% ============================================================
+\documentclass[12pt,a4paper]{report}
+
+%% ── Packages ────────────────────────────────────────────────
+\usepackage[a4paper, top=25mm, bottom=25mm, left=30mm, right=20mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[hidelinks, colorlinks=true, linkcolor=black, citecolor=blue!60!black, urlcolor=blue!60!black]{hyperref}
+\usepackage[backend=bibtex, style=ieee, sorting=none]{biblatex}
+\addbibresource{aevora-report.bib}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, shapes.geometric, shapes.misc, positioning, fit, backgrounds, calc, decorations.pathreplacing}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{tocloft}
+\usepackage{appendix}
+\usepackage{pdfpages}
+
+%% ── Line spacing ─────────────────────────────────────────────
+\onehalfspacing
+
+%% ── Chapter/Section heading style ───────────────────────────
+\titleformat{\chapter}[block]
+  {\normalfont\Large\bfseries}
+  {CHAPTER \thechapter}{1em}{\uppercase}
+\titlespacing*{\chapter}{0pt}{-10pt}{20pt}
+
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\itshape}{\thesubsubsection}{1em}{}
+
+%% ── Header / Footer ─────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\fancyhead[L]{\small\textit{Aevora: A Multi-Platform WireGuard-Based VPN System}}
+\fancyhead[R]{\small\textit{SSN College of Engineering}}
+\fancyfoot[C]{\small\thepage}
+
+%% ── Code listing style ──────────────────────────────────────
+\definecolor{codebg}{rgb}{0.97,0.97,0.97}
+\definecolor{codeframe}{rgb}{0.8,0.8,0.8}
+\definecolor{codecomment}{rgb}{0.25,0.50,0.25}
+\definecolor{codekw}{rgb}{0.15,0.15,0.75}
+\lstset{
+  backgroundcolor=\color{codebg},
+  frame=single, framesep=4pt, rulecolor=\color{codeframe},
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecomment}\itshape,
+  stringstyle=\color{red!60!black},
+  breaklines=true, showstringspaces=false,
+  numbers=left, numberstyle=\tiny\color{gray},
+  xleftmargin=6mm, xrightmargin=2mm
+}
+
+%% ── TikZ style shortcuts ────────────────────────────────────
+\tikzset{
+  box/.style={rectangle, rounded corners=4pt, draw=#1!60, fill=#1!10,
+              text width=3.2cm, align=center, minimum height=1cm, font=\small},
+  wbox/.style={box=black!50},
+  bbox/.style={box=blue!70},
+  gbox/.style={box=green!60!black},
+  rbox/.style={box=red!60},
+  obox/.style={box=orange!70!black},
+  pbox/.style={box=purple!60},
+  tbox/.style={box=teal!60},
+  arr/.style={-{Stealth[length=5pt]}, thick},
+  darr/.style={{Stealth[length=5pt]}-{Stealth[length=5pt]}, thick, dashed},
+  seqbox/.style={rectangle, draw=gray!60, fill=white,
+                 text width=2.5cm, align=center, font=\scriptsize},
+  lifeline/.style={draw=gray!50, dashed, thick}
+}
+
+%% ── TOC depth ───────────────────────────────────────────────
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+
+%% ── Misc ─────────────────────────────────────────────────────
+\newcommand{\todo}[1]{\textbf{[TO BE FILLED: #1]}}
+\newcommand{\wireguard}{WireGuard\textsuperscript{\textregistered}}
+
+%% ════════════════════════════════════════════════════════════
+\begin{document}
+%% ════════════════════════════════════════════════════════════
+
+%% ── Title Page ──────────────────────────────────────────────
+\begin{titlepage}
+\begin{center}
+\vspace*{0.5cm}
+
+{\Large \textbf{MINI-PROJECT REPORT}}\\[0.4cm]
+{\small (Submitted in partial fulfilment of the requirements for the course\\
+\textit{Computer Networks} --- B.E. Computer Science and Engineering)}\\[1.5cm]
+
+{\LARGE \textbf{Aevora: A Multi-Platform WireGuard-Based\\[4pt] VPN System}}\\[2cm]
+
+\textit{Submitted by}\\[0.6cm]
+\begin{tabular}{ll}
+\textbf{Kavinsoorya K S} & \textbf{3122247001030} \\[4pt]
+\textbf{Danusu K}        & \textbf{3122247001013} \\[4pt]
+\textbf{Ashwath Ram T}   & \textbf{3122247001006} \\
+\end{tabular}
+
+\vfill
+
+{\large \textbf{Department of Computer Science and Engineering}}\\[0.4cm]
+{\large \textbf{SSN College of Engineering, Chennai}}\\[0.4cm]
+{\large \textbf{Academic Year 2026--2027}}\\[1cm]
+
+\rule{0.6\linewidth}{0.4pt}
+\end{center}
+\end{titlepage}
+
+%% ── Abstract ────────────────────────────────────────────────
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\markboth{Abstract}{Abstract}
+
+Virtual Private Network (VPN) technology is fundamental to secure, private communication over untrusted public networks. Existing commercial solutions impose subscription costs, opaque server infrastructures, and centralized trust models, while self-hosted alternatives remain either inaccessible to non-experts or limited to single platforms.
+
+This report presents \textbf{Aevora}, a self-hosted, multi-platform VPN system built on the \wireguard{} protocol. Aevora separates the \emph{control plane} from the \emph{data plane}: a Go-based HTTP API backed by PostgreSQL manages identity, device enrollment, gateway registration, connection leasing, and health monitoring, while the WireGuard kernel module handles all packet-level encryption and routing on dedicated gateway servers. A shared Rust client core, exposed via the UniFFI foreign-function interface to Swift and Kotlin, and via a C ABI to .NET, implements WireGuard X25519 key generation, connection state management, and authenticated API communication for four native client platforms (macOS, iOS, Android, and Windows).
+
+The control plane implements invite-gated device enrollment using HS256 JSON Web Tokens, Argon2id password hashing, per-IP rate limiting, and token refresh flows. Gateway selection employs a fitness function that weights spare peer capacity (70\%) and available uplink bandwidth (30\%). The node agent runs a pull-model reconciliation loop against the control plane, programming the WireGuard interface without storing any client private keys. Client latency is measured via a TCP probe server bound to the gateway's inner tunnel address.
+
+The system is verified through unit and integration tests covering 21 Rust test cases and five Go packages in the control plane, plus four packages in the gateway agent. The result is a production-ready, secure, auditable VPN system that a small team can deploy and operate without vendor dependency.
+
+\vspace{1em}
+\noindent\textbf{Keywords:} WireGuard, VPN, Control Plane, Go, Rust, UniFFI, NetworkExtension, WireGuardNT, X25519, ChaCha20-Poly1305, PostgreSQL, JWT, Argon2id.
+
+%% ── Table of Contents ───────────────────────────────────────
+\tableofcontents
+\listoffigures
+\listoftables
+
+%% ════════════════════════════════════════════════════════════
+\chapter{Introduction}
+%% ════════════════════════════════════════════════════════════
+
+\section{Background}
+
+A Virtual Private Network creates an encrypted, authenticated tunnel between a client device and a server gateway, routing the client's internet traffic through that server so that (a) the client's IP address as seen by remote services is the gateway's address, and (b) the traffic between client and gateway is cryptographically protected even over untrusted infrastructure.
+
+Classical VPN protocols such as OpenVPN and IPsec achieve their goals but are architecturally heavy: OpenVPN is a userspace TLS-based daemon that introduces measurable throughput overhead; IPsec's IKEv2 handshake is complex to configure and audit. \wireguard{}, introduced by Donenfeld in 2017 \cite{donenfeld2017wireguard}, addresses both shortcomings. It is implemented inside the Linux kernel (and in a cross-platform Go/C library for other systems), uses a fixed, modern cryptographic suite (X25519 key exchange, ChaCha20-Poly1305 AEAD, BLAKE2s hashing, and the Noise protocol framework), and has a codebase roughly 100$\times$ smaller than OpenVPN, making it practical to audit.
+
+Despite WireGuard's technical maturity, deploying a complete multi-platform VPN service built around it requires integrating a control plane for fleet management, platform-specific OS VPN extensions, and a cross-platform client library. These integration tasks remain non-trivial, and no open-source reference implementation covers all four major desktop/mobile platforms simultaneously.
+
+\section{Problem Statement}
+
+Commercial VPN services such as NordVPN, ExpressVPN, and ProtonVPN provide usable multi-platform clients but require ongoing subscription fees, involve centralized trust in a commercial operator, and offer no transparency into their infrastructure. Self-hosted alternatives such as Algo and Streisand automate WireGuard server provisioning but provide only command-line configuration files, without a native GUI application or a control-plane API that handles multi-device enrollment, gateway health monitoring, or connection lifecycle management.
+
+The problem, therefore, is: \emph{how do we build a subscription-free, self-hosted VPN system that combines the cryptographic simplicity of WireGuard with a proper control plane, fleet management, and native-quality client applications on macOS, iOS, Android, and Windows — with no traffic or DNS logging?}
+
+\section{Objectives}
+
+The objectives of this project are:
+\begin{enumerate}[leftmargin=*]
+  \item To study the WireGuard protocol's cryptographic foundations and compare it with OpenVPN and IPsec.
+  \item To design a layered VPN architecture that cleanly separates the control plane (identity, gateway fleet, connection leases) from the data plane (packet-level tunnelling).
+  \item To implement a production-grade Go control plane with a RESTful API, PostgreSQL persistence, JWT authentication, Argon2id password hashing, per-IP rate limiting, and Prometheus observability.
+  \item To implement a shared Rust client core that performs on-device WireGuard key generation, connection-state management, and API communication, and expose it natively to Swift (iOS/macOS), Kotlin (Android), and C\#/.NET (Windows) via automated FFI bindings.
+  \item To implement and verify native VPN client applications for four platforms using the respective OS VPN frameworks: Apple NetworkExtension, Android VpnService, and Windows WireGuardNT.
+  \item To evaluate the system's correctness through structured unit and integration tests covering authentication flows, gateway selection, lease allocation, agent reconciliation, and tunnel statistics.
+\end{enumerate}
+
+\section{Scope of the Project}
+
+\textbf{In scope:}
+\begin{itemize}[leftmargin=*]
+  \item Control-plane REST API (Go), PostgreSQL schema (four migrations), and Docker Compose deployment.
+  \item Gateway node agent (Go) performing self-registration, heartbeat, peer reconciliation, and in-tunnel latency probing.
+  \item Shared Rust client library (aevora-core), UniFFI bindings for Swift/Kotlin, and C ABI for .NET P/Invoke.
+  \item Native client applications for macOS (SwiftUI + NetworkExtension), iOS (SwiftUI + PacketTunnelProvider), Android (Jetpack Compose + VpnService), and Windows (.NET~8 WPF + WireGuardNT).
+  \item Invite-gated enrollment, multi-device management, password-based login, JWT access tokens, and refresh-token rotation.
+  \item Gateway fitness-weighted selection and IP-lease allocation under row-level database locks.
+  \item Real download/upload statistics from OS tunnel byte counters and TCP-probe latency from inside the tunnel.
+  \item Prometheus metrics endpoint and structured JSON logging.
+\end{itemize}
+
+\textbf{Out of scope:}
+\begin{itemize}[leftmargin=*]
+  \item Split-tunnel DNS leak prevention (considered a platform-specific enhancement).
+  \item Multi-hop or onion-routing configurations.
+  \item Web-based administrator dashboard (API-only administration).
+  \item Commercial payment or subscription infrastructure.
+\end{itemize}
+
+\section{Motivation}
+
+The motivation for Aevora is threefold. First, \emph{privacy}: a self-hosted VPN eliminates the need to trust a commercial operator with browsing metadata. Second, \emph{cost}: the entire system can run on a single inexpensive Linux VPS, with no recurring per-user licence. Third, \emph{educational depth}: building a VPN end-to-end — from database schema to kernel-level tunnel — provides a comprehensive practical grounding in network security, distributed systems, cross-platform software engineering, and cryptographic protocol design. From a Computer Networks perspective, Aevora requires applying concepts from all layers of the TCP/IP stack: IP address allocation (Layer 3), UDP encapsulation (Layer 4), and application-level protocol design (Layer 7), as well as cryptographic authentication, key agreement, and authenticated encryption.
+
+%% ════════════════════════════════════════════════════════════
+\chapter{Literature Review and Background Study}
+%% ════════════════════════════════════════════════════════════
+
+\section{Virtual Private Networks and Tunnelling}
+
+A VPN establishes an encrypted virtual network interface (tun/tap) on the client device and routes selected or all traffic through it \cite{kurose2022computer}. At the network layer, the original IP packet (inner packet) is encapsulated inside another UDP or TCP segment (outer packet) bearing the real endpoint addresses. The gateway decapsulates and forwards the inner packet on behalf of the client, so the destination sees the gateway's IP, not the client's. This provides both traffic confidentiality (encryption) and source anonymity (IP masking).
+
+\section{WireGuard Protocol}
+
+\wireguard{} \cite{donenfeld2017wireguard, wireguard_whitepaper} is a Layer-3 VPN protocol that runs over UDP. Its design principles are:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Cryptographic opinionatedness}: a single, fixed suite -- no cipher negotiation, eliminating downgrade attacks.
+  \item \textbf{Silent rejection}: packets from unknown peers are discarded without any response, making the server \emph{cloakable}.
+  \item \textbf{Minimal attack surface}: the Linux kernel implementation is approximately 4,000 lines of C, compared to $\sim$600,000 for OpenVPN.
+\end{itemize}
+
+\subsection{Noise Protocol Framework}
+
+WireGuard's handshake is an instantiation of the Noise IKpsk2 pattern \cite{donenfeld2017wireguard}. The handshake achieves mutual authentication, forward secrecy, and identity hiding, and completes in exactly one round-trip (initiator message + responder message), enabling fast session establishment.
+
+\subsection{Cryptographic Suite}
+
+Table~\ref{tab:wireguard_crypto} summarises the cryptographic primitives.
+
+\begin{table}[H]
+\centering
+\caption{WireGuard cryptographic suite}
+\label{tab:wireguard_crypto}
+\begin{tabular}{lll}
+\toprule
+\textbf{Function}          & \textbf{Primitive}         & \textbf{Key Size} \\
+\midrule
+Key exchange               & X25519 (ECDH)              & 256-bit           \\
+Authenticated encryption   & ChaCha20-Poly1305          & 256-bit           \\
+Hashing / MAC              & BLAKE2s                    & 256-bit output    \\
+Pseudorandom function      & HMAC-BLAKE2s               & ---               \\
+Optional pre-shared key    & HKDF (symmetric PSK)       & 256-bit           \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Packet Encapsulation}
+
+Each WireGuard data message adds a 32-byte header (4-byte type, 4 bytes reserved, 4-byte receiver index, 8-byte nonce) plus a 16-byte Poly1305 authentication tag to the inner IP packet. Total overhead per packet is 60 bytes (32 outer-UDP header + 32 WG header -- 4 bytes overhead versus raw IP), which is significantly lower than OpenVPN's TLS record overhead.
+
+\section{Existing VPN Solutions and Their Limitations}
+
+Table~\ref{tab:vpn_comparison} compares Aevora with existing approaches.
+
+\begin{table}[H]
+\centering
+\caption{Comparison of VPN solutions}
+\label{tab:vpn_comparison}
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Feature}         & \textbf{OpenVPN} & \textbf{IPsec/IKEv2} & \textbf{Algo} & \textbf{Commercial} & \textbf{Aevora} \\
+\midrule
+Protocol                 & TLS/UDP          & ESP + IKEv2          & WireGuard     & Varies              & WireGuard       \\
+Kernel integration       & Userspace         & Kernel               & Kernel        & Varies              & Kernel          \\
+Multi-platform GUI       & 3rd party         & Partial              & CLI only      & Yes                 & Yes (4 native)  \\
+Control plane API        & None              & None                 & None          & Closed              & Open REST       \\
+Self-hosted              & Yes               & Yes                  & Yes           & No                  & Yes             \\
+Invite/enrollment flow   & Manual            & Manual               & Manual        & App store           & Invite code     \\
+Gateway fleet management & Manual            & Manual               & Ansible       & Closed              & Automated       \\
+No traffic logging       & Configurable      & Configurable         & Yes           & Claims only         & Enforced        \\
+Cost                     & Free              & Free                 & Free          & \$4--15/month       & Free            \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{JWT Authentication}
+
+JSON Web Tokens \cite{rfc7519} provide a stateless bearer token mechanism. A JWT consists of a base64url-encoded header, payload, and HMAC signature. Aevora implements a minimal, stdlib-only HS256 JWT (HMAC-SHA256) with pinned algorithm verification to prevent algorithm-confusion attacks (an attacker cannot substitute the ``none'' algorithm or an asymmetric algorithm to forge tokens).
+
+\section{Argon2id Password Hashing}
+
+Argon2id \cite{biryukov2016argon2} is the winner of the Password Hashing Competition (2015) and the OWASP-recommended choice for password storage. Unlike bcrypt, it parameterises both time cost and memory cost, making GPU and ASIC attacks proportionally expensive. Aevora uses: time = 1, memory = 64 MB, parallelism = 4, key length = 32 bytes.
+
+\section{X25519 Key Agreement}
+
+X25519 \cite{bernstein2006curve25519} is an Elliptic-Curve Diffie-Hellman function over Curve25519. It is chosen for WireGuard because it avoids the implementation pitfalls of NIST curves, executes in constant time (resistant to timing side-channels), and achieves 128 bits of security with compact 32-byte keys. WireGuard uses X25519 for both static key pairs (stored per device) and ephemeral key pairs (generated per handshake to provide forward secrecy).
+
+\section{Rust and UniFFI for Cross-Platform Libraries}
+
+Rust \cite{rust_lang} provides memory safety without garbage collection through its ownership model, making it suitable for security-critical code that is linked into multiple platform runtimes. Mozilla's UniFFI \cite{uniffi} generates Swift and Kotlin bindings automatically from a Rust interface definition, allowing the same Rust business logic to be used from both platforms without writing manual FFI glue code.
+
+%% ════════════════════════════════════════════════════════════
+\chapter{System Analysis}
+%% ════════════════════════════════════════════════════════════
+
+\section{Existing System}
+
+In the existing paradigm, a user who wants a self-hosted WireGuard VPN must:
+\begin{enumerate}[leftmargin=*]
+  \item Provision a Linux VPS manually.
+  \item Generate WireGuard key pairs for the server and each client using the \texttt{wg} command-line tool.
+  \item Write configuration files (\texttt{wg0.conf}) by hand for both server and each client.
+  \item Distribute client configuration files (which contain private keys) out-of-band, for example via a QR code or a shared file.
+  \item Import the configuration into a WireGuard client application (Tunnelblick, the official WireGuard app, etc.).
+  \item Manage peer additions and removals manually by editing server configuration and reloading the WireGuard interface.
+\end{enumerate}
+
+Gateway tools such as Algo~VPN automate step~1 and part of step~3 via Ansible playbooks, but the result is still static configuration without a live API.
+
+\section{Limitations of Existing System}
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{No device enrollment flow}: new devices require manual key distribution, creating operational burden and a risk of key mishandling.
+  \item \textbf{No health monitoring}: if the gateway process crashes or the server goes offline, there is no automated failover.
+  \item \textbf{No multi-gateway fleet management}: scaling to multiple exit nodes in different countries requires duplicating manual configuration.
+  \item \textbf{No revocation}: removing a compromised device requires manual peer removal across all gateways.
+  \item \textbf{No native client applications}: existing WireGuard clients require importing configuration files; they provide no server-selection UI or connection lifecycle tied to a user's account.
+  \item \textbf{No real-time statistics}: throughput and latency are not surfaced to the client without additional tooling.
+  \item \textbf{Private keys in configuration files}: the traditional wg-quick configuration file includes the client private key in plaintext, creating a risk if the file is accessed.
+\end{enumerate}
+
+\section{Proposed System}
+
+Aevora's proposed architecture eliminates all of the above limitations through the following design:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Control plane}: A Go HTTP service fronting a PostgreSQL database. It manages users, devices, invite codes, gateway registrations, and connection leases through a REST API. The client's private key \emph{never} leaves the device; only the public key is sent to the server.
+  \item \textbf{Gateway agent}: A Go binary that runs on each Linux VPS. It self-registers with the control plane, sends heartbeats with live load metrics, fetches the current peer list, and reconciles the WireGuard interface via the \texttt{wg} CLI. No inbound control connections to the gateway; it pulls its configuration.
+  \item \textbf{Rust client core}: A shared library (aevora-core) compiled for each target ABI, implementing on-device key generation (X25519 via x25519-dalek), the connection state machine, authenticated API calls, and WireGuard tunnel configuration assembly.
+  \item \textbf{Native clients}: Platform-specific UIs and OS VPN extensions that call the Rust core and drive the OS tunnel API (Apple NetworkExtension, Android VpnService, Windows WireGuardNT).
+\end{itemize}
+
+\section{Advantages of Proposed System}
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Zero private-key exposure}: keys are generated on-device and stored in the platform keystore (macOS/iOS Keychain, Android Keystore, Windows DPAPI). The server never receives or stores any private key.
+  \item \textbf{Automated enrollment}: a user receives an invite code and completes enrollment in the app; no manual key distribution.
+  \item \textbf{Multi-device management}: each user can register multiple devices; individual devices can be revoked instantly, immediately removing their WireGuard peer from all gateways.
+  \item \textbf{Elastic fleet}: new exit nodes self-register by running the agent binary and setting two environment variables. No administrator action required to add a country.
+  \item \textbf{Automatic failover}: the gateway reaper periodically expires gateways that miss their heartbeat window; the next connection request will select an available gateway.
+  \item \textbf{Real statistics}: download/upload rates are computed from OS tunnel byte counters, and latency is measured by a TCP probe inside the encrypted tunnel.
+  \item \textbf{Native UIs on all four platforms} with consistent connection/disconnection semantics.
+\end{enumerate}
+
+%% ════════════════════════════════════════════════════════════
+\chapter{System Design}
+%% ════════════════════════════════════════════════════════════
+
+\section{System Architecture}
+
+Figure~\ref{fig:arch} shows the high-level architecture. The system is divided into three zones: the \emph{control plane} (cloud-hosted API + database), the \emph{data plane} (one or more Linux gateway VPSes running WireGuard and the node agent), and the \emph{client} (native app on user device).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.8cm and 1.0cm]
+
+  % Client block
+  \node[bbox, text width=3.4cm, minimum height=3.5cm] (client) at (0,0)
+    {\textbf{Client Device}\\[6pt]
+     \footnotesize Native UI\\(SwiftUI / Compose / WPF)\\[4pt]
+     Rust Core\\(aevora-core)\\[4pt]
+     OS Tunnel\\(NE / VpnService / WgNT)};
+
+  % Control Plane
+  \node[gbox, text width=3.4cm, minimum height=3.5cm, right=2.5cm of client] (cp)
+    {\textbf{Control Plane}\\[6pt]
+     \footnotesize Go HTTP API\\(18 endpoints)\\[4pt]
+     PostgreSQL 15\\(5 tables)\\[4pt]
+     JWT + Argon2id\\Auth};
+
+  % Gateway
+  \node[rbox, text width=3.4cm, minimum height=3.5cm, right=2.5cm of cp] (gw)
+    {\textbf{Gateway Node}\\[6pt]
+     \footnotesize Linux VPS\\WireGuard\\(kernel module)\\[4pt]
+     aevora-agent\\(Go, pull model)\\[4pt]
+     Latency Probe};
+
+  % Internet cloud
+  \node[draw=gray!60, dashed, ellipse, text width=2.0cm, align=center,
+        below=1.8cm of cp, font=\footnotesize] (inet) {Public\\Internet};
+
+  % Arrows: client <-> control plane (HTTPS)
+  \draw[arr, blue!60] ([yshift=2mm]client.east) -- node[above, font=\tiny]{HTTPS/REST} ([yshift=2mm]cp.west);
+  \draw[arr, blue!30] ([yshift=-2mm]cp.west) -- ([yshift=-2mm]client.east);
+
+  % Gateway agent <-> control plane (HTTPS)
+  \draw[arr, green!60!black] ([yshift=2mm]gw.west) -- node[above, font=\tiny]{HTTPS (pull)} ([yshift=2mm]cp.east);
+  \draw[arr, green!40!black] ([yshift=-2mm]cp.east) -- ([yshift=-2mm]gw.west);
+
+  % Client WG tunnel <-> Gateway
+  \draw[arr, red!70, very thick, bend right=25]
+    (client.south) to node[below, font=\tiny, yshift=-2pt]{WireGuard UDP tunnel (data plane)} (gw.south);
+
+  % Gateway -> Internet
+  \draw[arr, gray!70] (gw.south) -- ++(0,-0.9) -| (inet.east);
+
+  % Labels
+  \node[font=\tiny, below=0.15cm of client, text=blue!60] {Port 8099 (control)};
+  \node[font=\tiny, below=0.15cm of gw, text=red!70]     {UDP 51820 (data)};
+
+\end{tikzpicture}
+\caption{Aevora high-level system architecture showing the control plane, data plane, and client zones.}
+\label{fig:arch}
+\end{figure}
+
+The critical architectural principle is \textbf{control-plane / data-plane separation}: the control-plane server handles no user traffic and stores no WireGuard session state. All packet-level work happens on the gateway. This means the control plane can be a low-resource cloud instance, and gateways can be added or removed independently.
+
+\section{Control Plane Architecture}
+
+Figure~\ref{fig:cp_arch} shows the internal structure of the control plane.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.5cm and 0.7cm]
+  \node[bbox, text width=2.8cm] (router) {\footnotesize HTTP Router\\Go stdlib mux};
+
+  \node[gbox, text width=2.2cm, above right=0.4cm and 0.6cm of router] (auth)   {\footnotesize Auth\\JWT + Argon2id};
+  \node[obox, text width=2.2cm, right=0.6cm of router]                 (fleet)  {\footnotesize Fleet\\Handlers};
+  \node[pbox, text width=2.2cm, below right=0.4cm and 0.6cm of router] (conn)   {\footnotesize Connection\\Handlers};
+
+  \node[tbox, text width=2.2cm, right=1.0cm of auth]  (sel)   {\footnotesize Selection\\Fitness fn};
+  \node[wbox, text width=2.2cm, right=1.0cm of fleet] (store) {\footnotesize Store Layer\\pgx/v5};
+  \node[rbox, text width=2.2cm, right=1.0cm of conn]  (rl)    {\footnotesize Rate Limiter\\token bucket};
+
+  \node[bbox, text width=2.2cm, right=1.0cm of store] (pg) {\footnotesize PostgreSQL 15\\5 tables};
+  \node[gbox, text width=2.2cm, right=1.0cm of sel]   (prom) {\footnotesize Prometheus\\/metrics};
+
+  \draw[arr] (router) -- (auth);
+  \draw[arr] (router) -- (fleet);
+  \draw[arr] (router) -- (conn);
+  \draw[arr] (auth) -- (store);
+  \draw[arr] (fleet) -- (sel);
+  \draw[arr] (fleet) -- (store);
+  \draw[arr] (conn) -- (store);
+  \draw[arr] (conn) -- (rl);
+  \draw[arr] (store) -- (pg);
+  \draw[arr] (fleet) -- (prom);
+  \draw[arr] (conn) -- (prom);
+\end{tikzpicture}
+\caption{Internal architecture of the Aevora control plane.}
+\label{fig:cp_arch}
+\end{figure}
+
+\section{Database Schema}
+
+The database consists of five tables managed by four sequential migration scripts. Figure~\ref{fig:db_schema} shows the entity-relationship structure.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  tab/.style={rectangle, draw=gray!70, fill=gray!5, rounded corners=2pt,
+              font=\scriptsize\ttfamily, align=left, inner sep=6pt},
+  fk/.style={-{Stealth[length=4pt]}, dashed, gray!60}]
+
+  \node[tab] (users) {
+    \textbf{users}\\
+    \rule{\linewidth}{0.3pt}\\
+    id uuid PK\\email citext UNIQUE\\display\_name text\\status text\\created\_at timestamptz
+  };
+
+  \node[tab, right=1.6cm of users] (devices) {
+    \textbf{devices}\\
+    \rule{\linewidth}{0.3pt}\\
+    id uuid PK\\user\_id uuid FK\\name text\\platform text\\public\_key text UNIQUE\\created\_at timestamptz\\revoked\_at timestamptz
+  };
+
+  \node[tab, below=1.0cm of users] (invites) {
+    \textbf{invite\_codes}\\
+    \rule{\linewidth}{0.3pt}\\
+    code text PK\\note text\\used\_by uuid FK\\expires\_at timestamptz
+  };
+
+  \node[tab, right=1.6cm of devices] (gateways) {
+    \textbf{gateways}\\
+    \rule{\linewidth}{0.3pt}\\
+    id uuid PK\\location\_id uuid FK\\name text UNIQUE\\public\_key text\\endpoint\_host text\\endpoint\_port int\\wg\_subnet\_v4 cidr\\capacity int\\status text\\active\_peers int\\cpu\_pct float\\rx\_bps, tx\_bps bigint\\agent\_token\_hash text\\last\_heartbeat\_at timestamptz
+  };
+
+  \node[tab, below=1.0cm of devices] (leases) {
+    \textbf{leases}\\
+    \rule{\linewidth}{0.3pt}\\
+    id uuid PK\\gateway\_id uuid FK\\device\_id uuid FK\\client\_public\_key text\\assigned\_ip\_v4 inet\\state text\\expires\_at timestamptz
+  };
+
+  \node[tab, below=1.0cm of gateways] (locations) {
+    \textbf{locations}\\
+    \rule{\linewidth}{0.3pt}\\
+    id uuid PK\\code text UNIQUE\\country\_name text\\enabled boolean
+  };
+
+  \node[tab, below=1.0cm of leases] (refresh) {
+    \textbf{refresh\_tokens}\\
+    \rule{\linewidth}{0.3pt}\\
+    id uuid PK\\device\_id uuid FK\\token\_hash text UNIQUE\\expires\_at timestamptz\\revoked\_at timestamptz
+  };
+
+  \draw[fk] (devices.west) -- (users.east);
+  \draw[fk] (invites.east) -| ([xshift=-0.2cm]users.south);
+  \draw[fk] (leases.north) -- (devices.south);
+  \draw[fk] (leases.east) -- (gateways.west);
+  \draw[fk] (gateways.south) -- (locations.north);
+  \draw[fk] (refresh.north) -- (leases.south);
+\end{tikzpicture}
+\caption{Aevora database entity-relationship diagram (PostgreSQL 15).}
+\label{fig:db_schema}
+\end{figure}
+
+\section{REST API Design}
+
+Table~\ref{tab:api_endpoints} lists all 18 HTTP endpoints exposed by the control plane.
+
+\begin{table}[H]
+\centering
+\caption{Control-plane REST API endpoints}
+\label{tab:api_endpoints}
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Method} & \textbf{Path} & \textbf{Auth} & \textbf{Description} \\
+\midrule
+GET  & /healthz                     & None          & Health check \\
+GET  & /metrics                     & None          & Prometheus metrics \\
+GET  & /v1/locations                & JWT           & List available countries \\
+POST & /v1/enroll                   & Invite code   & Enroll user + device (rate-limited) \\
+POST & /v1/auth/login               & Password      & Issue access + refresh tokens \\
+POST & /v1/auth/refresh             & Refresh token & Rotate access token \\
+POST & /v1/auth/password            & JWT           & Set/change password \\
+GET  & /v1/devices                  & JWT           & List caller's devices \\
+POST & /v1/devices                  & JWT           & Register additional device \\
+DELETE & /v1/devices/\{id\}         & JWT           & Revoke device \\
+POST & /v1/invites                  & Admin token   & Mint invite code \\
+POST & /v1/connections              & JWT           & Create connection (select + lease) \\
+DELETE & /v1/connections/\{id\}     & JWT           & Release connection \\
+POST & /v1/connections/\{id\}/stats & JWT           & Report tunnel stats + renew lease \\
+POST & /v1/gateways/register        & Enroll secret & Agent self-registration \\
+POST & /v1/gateways/heartbeat       & Node token    & Agent heartbeat + load metrics \\
+POST & /v1/gateways/deregister      & Node token    & Agent graceful deregistration \\
+GET  & /v1/gateways/peers           & Node token    & Agent fetches its current peer list \\
+GET  & /v1/gateways                 & Admin token   & Admin: list all gateways \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Client Architecture}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.6cm and 0.9cm]
+  \node[gbox, text width=5cm, minimum height=0.9cm] (rust)
+    {\textbf{aevora-core} (Rust)\\[-2pt]\scriptsize keys · api · state · tunnel · client};
+
+  \node[bbox, text width=2.2cm, above left=0.6cm and 0.3cm of rust] (swift)
+    {\scriptsize Swift/SwiftUI\\UniFFI bindings};
+  \node[obox, text width=2.2cm, above right=0.6cm and 0.3cm of rust] (kotlin)
+    {\scriptsize Kotlin/Compose\\UniFFI bindings};
+  \node[pbox, text width=2.2cm, below left=0.6cm and 0.3cm of rust] (csharp)
+    {\scriptsize C\#/.NET/WPF\\C ABI / P/Invoke};
+  \node[rbox, text width=2.2cm, below right=0.6cm and 0.3cm of rust] (capi)
+    {\scriptsize Feature gate:\\capi (extern C)};
+
+  \node[tbox, text width=2.2cm, above left=0.3cm and 0.6cm of swift] (ne)
+    {\scriptsize NetworkExtension\\PacketTunnelProvider};
+  \node[tbox, text width=2.2cm, above right=0.3cm and 0.6cm of kotlin] (vs)
+    {\scriptsize Android VpnService\\wireguard-android};
+  \node[tbox, text width=2.2cm, below left=0.3cm and 0.6cm of csharp] (wnt)
+    {\scriptsize WireGuardNT\\tunnel.dll};
+
+  \draw[arr] (rust) -- (swift);
+  \draw[arr] (rust) -- (kotlin);
+  \draw[arr] (rust) -- (csharp);
+  \draw[arr] (rust) -- (capi);
+  \draw[arr] (swift) -- (ne);
+  \draw[arr] (kotlin) -- (vs);
+  \draw[arr] (csharp) -- (wnt);
+\end{tikzpicture}
+\caption{Cross-platform client architecture. The Rust core is compiled once per target ABI; platform code handles only UI and OS tunnel management.}
+\label{fig:client_arch}
+\end{figure}
+
+\section{Network Topology}
+
+Figure~\ref{fig:topology} shows how a connected client's traffic flows through the Aevora network.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.92]
+  % Client
+  \node[bbox, text width=2.4cm] (dev) at (0,0) {\footnotesize Client Device\\(any platform)\\10.7.0.5/32};
+
+  % Gateway
+  \node[rbox, text width=2.6cm] (gwnode) at (6,0)
+    {\footnotesize Gateway VPS\\WireGuard wg0\\10.7.0.1/24};
+
+  % Control plane (top)
+  \node[gbox, text width=2.4cm] (cpnode) at (3,3)
+    {\footnotesize Control Plane\\(TCP 8099)};
+
+  % Internet (right)
+  \node[draw=gray!60, ellipse, text width=2.0cm, align=center,
+        font=\footnotesize] (inet2) at (10,0) {Public\\Internet};
+
+  % Destination
+  \node[wbox, text width=2.0cm] (dest) at (10,-2.5) {\footnotesize Destination\\Server};
+
+  % WireGuard tunnel (thick dashed)
+  \draw[red!70, thick, dashed, <->] (dev) -- node[above, font=\tiny]{WireGuard UDP/51820\\encrypted + authenticated} (gwnode);
+
+  % Control API
+  \draw[blue!50, arr] (dev) -- node[left, font=\tiny]{HTTPS} (cpnode);
+  \draw[green!60!black, arr] (gwnode) -- node[right, font=\tiny]{HTTPS\\(heartbeat)} (cpnode);
+
+  % Gateway to internet
+  \draw[gray!70, arr] (gwnode) -- (inet2);
+  \draw[gray!70, arr] (inet2) -- (dest);
+
+  % IP note
+  \node[font=\tiny, below=0.15cm of dev] {Real IP: 203.x.x.x};
+  \node[font=\tiny, below=0.15cm of gwnode] {Gateway IP: 45.y.y.y};
+  \node[font=\tiny, below=0.15cm of dest] {Sees 45.y.y.y};
+\end{tikzpicture}
+\caption{Aevora network topology. The destination server observes the gateway's IP, not the client's. The WireGuard tunnel carries all client data; control-plane traffic uses HTTPS.}
+\label{fig:topology}
+\end{figure}
+
+\section{Data Flow Diagrams}
+
+\subsection{Device Enrollment Flow}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.3cm, every node/.style={font=\scriptsize}]
+  % Lifelines
+  \node[seqbox] (cli) at (0,0) {Client App};
+  \node[seqbox] (cp2) at (5,0) {Control Plane};
+  \node[seqbox] (db2) at (9,0) {PostgreSQL};
+
+  \draw[lifeline] (0,-0.3) -- (0,-9);
+  \draw[lifeline] (5,-0.3) -- (5,-9);
+  \draw[lifeline] (9,-0.3) -- (9,-9);
+
+  % Step 1
+  \draw[arr] (0,-0.8) -- node[above]{Generate X25519 keypair on-device} (0,-0.8);
+  \node[right=0.05cm, align=left] at (0,-1.1) {(private key $\rightarrow$ Keychain; public key retained)};
+
+  % Step 2
+  \draw[arr] (0,-1.8) -- node[above]{POST /v1/enroll \{invite\_code, email, public\_key\}} (5,-1.8);
+
+  % Step 3
+  \draw[arr] (5,-2.4) -- node[above]{Validate invite, insert user+device} (9,-2.4);
+
+  % Step 4
+  \draw[arr, blue!40] (9,-3.0) -- node[above]{user\_id, device\_id} (5,-3.0);
+
+  % Step 5
+  \draw[arr] (5,-3.6) -- node[above]{Issue HS256 access JWT + refresh token} (5,-3.6);
+
+  % Step 6
+  \draw[arr, blue!40] (5,-4.2) -- node[above]{\{access\_token, refresh\_token, device\_id\}} (0,-4.2);
+
+  % Step 7
+  \node[right=0.05cm] at (0,-4.8) {Store refresh token in secure storage};
+
+  % Step 8
+  \draw[arr] (0,-5.5) -- node[above]{GET /v1/locations  [Bearer: access\_token]} (5,-5.5);
+  \draw[arr, blue!40] (5,-6.1) -- node[above]{[\{code, country, available, servers\}]} (0,-6.1);
+
+  % Step 9
+  \node[align=center, font=\scriptsize\itshape, text=gray] at (4.5,-7.0)
+    {Enrollment complete. Access token expires in 1h;\\
+     client silently refreshes via POST /v1/auth/refresh.};
+\end{tikzpicture}
+\caption{Device enrollment sequence diagram.}
+\label{fig:enroll_seq}
+\end{figure}
+
+\subsection{Connection Establishment Flow}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.3cm, every node/.style={font=\scriptsize}]
+  \node[seqbox] (cl2) at (0,0) {Client};
+  \node[seqbox] (cp3) at (4.5,0) {Control Plane};
+  \node[seqbox] (db3) at (8.5,0) {PostgreSQL};
+  \node[seqbox] (ag)  at (12.5,0) {Agent};
+
+  \draw[lifeline] (0,-0.3) -- (0,-12);
+  \draw[lifeline] (4.5,-0.3) -- (4.5,-12);
+  \draw[lifeline] (8.5,-0.3) -- (8.5,-12);
+  \draw[lifeline] (12.5,-0.3) -- (12.5,-12);
+
+  \draw[arr] (0,-0.9) -- node[above, font=\tiny]{POST /v1/connections \{country\_code\}} (4.5,-0.9);
+  \draw[arr] (4.5,-1.6) -- node[above, font=\tiny]{Lock + SELECT healthy gateways} (8.5,-1.6);
+  \draw[arr] (4.5,-2.3) -- node[above, font=\tiny]{Compute fitness: 0.7×load + 0.3×bw} (4.5,-2.3);
+  \draw[arr] (4.5,-3.0) -- node[above, font=\tiny]{INSERT lease (assigned\_ip\_v4, expiry)} (8.5,-3.0);
+  \draw[arr, blue!40] (8.5,-3.7) -- node[above, font=\tiny]{lease row} (4.5,-3.7);
+  \draw[arr, blue!40] (4.5,-4.4) -- node[above, font=\tiny]{\{endpoint, gw\_pubkey, client\_ip, preshared\_key\}} (0,-4.4);
+
+  \draw[arr] (0,-5.1) -- node[above, font=\tiny]{Assemble wg-quick config from core} (0,-5.1);
+  \draw[arr] (0,-5.8) -- node[above, font=\tiny]{OS tunnel start (NE / VpnService / WgNT)} (0,-5.8);
+  \draw[arr] (0,-6.5) -- node[above, font=\tiny]{WireGuard handshake (Noise IKpsk2)} (12.5,-6.5);
+  \draw[arr, blue!40] (12.5,-7.2) -- node[above, font=\tiny]{Handshake response} (0,-7.2);
+  \node[align=center, text=green!50!black] at (6,-7.8) {\scriptsize\textbf{TUNNEL UP — traffic flows through gateway}};
+
+  % Agent reconcile
+  \draw[arr] (12.5,-8.5) -- node[above, font=\tiny]{GET /v1/gateways/peers [node token]} (4.5,-8.5);
+  \draw[arr, blue!40] (4.5,-9.2) -- node[above, font=\tiny]{[\{public\_key, allowed\_ips\}]} (12.5,-9.2);
+  \draw[arr] (12.5,-9.9) -- node[above, font=\tiny]{reconcile.Diff(current, desired) → wg set peer} (12.5,-9.9);
+
+  \draw[arr] (0,-10.6) -- node[above, font=\tiny]{POST /v1/connections/\{id\}/stats (every 3 s)} (4.5,-10.6);
+  \draw[arr, blue!40] (4.5,-11.3) -- node[above, font=\tiny]{renewed expires\_at} (0,-11.3);
+\end{tikzpicture}
+\caption{VPN connection establishment sequence diagram.}
+\label{fig:conn_seq}
+\end{figure}
+
+\section{Gateway Selection Algorithm}
+
+The fitness function for gateway selection is:
+
+\begin{equation}
+F(g) = \frac{w_L \cdot H_L(g) + w_B \cdot H_B(g)}{w_L + w_B}
+\label{eq:fitness}
+\end{equation}
+
+where:
+\begin{align*}
+H_L(g) &= \max\!\left(0,\; 1 - \frac{\text{active\_peers}(g)}{\text{capacity}(g)}\right) \quad \text{(load headroom)} \\
+H_B(g) &= \max\!\left(0,\; 1 - \frac{\text{rx\_bps}(g) + \text{tx\_bps}(g)}{\text{bandwidth\_mbps}(g) \times 10^6}\right) \quad \text{(bandwidth headroom)} \\
+w_L    &= 0.7, \quad w_B = 0.3 \quad \text{(default weights)}
+\end{align*}
+
+The gateway with the highest $F(g)$ among all healthy, non-full gateways in the requested country is selected. If no bandwidth is advertised, the formula reduces to load headroom alone ($F = H_L$). Gateways with $\text{active\_peers} \geq \text{capacity}$ are excluded.
+
+%% ════════════════════════════════════════════════════════════
+\chapter{Implementation}
+%% ════════════════════════════════════════════════════════════
+
+\section{Technologies Used}
+
+\begin{table}[H]
+\centering
+\caption{Technologies and frameworks used in Aevora}
+\label{tab:tech}
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Component}        & \textbf{Category}          & \textbf{Technology} \\
+\midrule
+Control Plane             & Language                   & Go 1.25             \\
+Control Plane             & HTTP Server                & Go stdlib net/http  \\
+Control Plane             & Database driver            & pgx/v5 (jackc/pgx)  \\
+Control Plane             & Observability              & Prometheus client\_golang \\
+Control Plane             & Password hashing           & golang.org/x/crypto/argon2 \\
+Control Plane             & Rate limiting              & golang.org/x/time/rate \\
+Database                  & RDBMS                      & PostgreSQL 15        \\
+Database                  & Extensions                 & pgcrypto, citext    \\
+Gateway Agent             & Language                   & Go 1.25              \\
+Gateway Agent             & WireGuard management       & wg CLI (wgctrl)     \\
+Client Core               & Language                   & Rust (edition 2021) \\
+Client Core               & Crypto (keys)              & x25519-dalek        \\
+Client Core               & HTTP transport             & ureq                \\
+Client Core               & FFI (Swift/Kotlin)         & UniFFI 0.25         \\
+Client Core               & JSON                       & serde\_json          \\
+macOS / iOS Client        & UI Framework               & SwiftUI             \\
+macOS / iOS Client        & Tunnel framework           & NetworkExtension    \\
+macOS / iOS Client        & WireGuard library          & WireGuardKit (wireguard-apple) \\
+macOS / iOS Client        & WireGuard Go runtime       & wireguard-go        \\
+Android Client            & UI Framework               & Jetpack Compose     \\
+Android Client            & Tunnel framework           & Android VpnService  \\
+Android Client            & WireGuard library          & wireguard-android (GoBackend) \\
+Android Client            & Secure storage             & EncryptedSharedPreferences \\
+Windows Client            & UI Framework               & WPF (.NET 8)        \\
+Windows Client            & Tunnel service             & WireGuardNT (tunnel.dll) \\
+Windows Client            & Core interop               & P/Invoke (C ABI)    \\
+Windows Client            & Secure storage             & DPAPI CryptProtectData \\
+Deployment                & Containerisation           & Docker + Compose    \\
+Deployment                & Reverse proxy (production) & Caddy               \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Hardware and Software Requirements}
+
+\subsection{Gateway Server}
+\begin{itemize}[leftmargin=*]
+  \item CPU: 1 vCPU (any x86\_64 or arm64), minimum.
+  \item RAM: 512 MB minimum; 1 GB recommended.
+  \item OS: Linux 5.6+ (WireGuard kernel module included); Ubuntu 22.04 LTS verified.
+  \item Network: public IP, UDP 51820 open, minimum 100 Mbps uplink.
+\end{itemize}
+
+\subsection{Control Plane Server}
+\begin{itemize}[leftmargin=*]
+  \item CPU: 1 vCPU.
+  \item RAM: 256 MB for the Go process; 512 MB for PostgreSQL on the same machine.
+  \item Ports: TCP 8099 (API), TCP 5432 (PostgreSQL).
+\end{itemize}
+
+\subsection{Client Development Environment}
+\begin{itemize}[leftmargin=*]
+  \item macOS/iOS: macOS 14+, Xcode 26+, Apple Developer account (for NetworkExtension entitlement), Go 1.21+ (for WireGuardKit Go runtime).
+  \item Android: Android Studio Koala+, NDK r27+, cargo-ndk.
+  \item Windows: Visual Studio 2022 with .NET 8 SDK, Rust toolchain (target x86\_64-pc-windows-msvc).
+\end{itemize}
+
+\section{Module Implementation}
+
+\subsection{Control Plane: JWT Authentication}
+
+The control plane implements a minimal, stdlib-only HS256 JWT without any external JWT library. This keeps the authentication code auditable in a single file (\texttt{internal/auth/jwt.go}, 100 lines). The algorithm is pinned at the verifier to prevent algorithm-confusion attacks:
+
+\begin{lstlisting}[language=Go, caption=Algorithm pinning in JWT verification]
+// Pin the algorithm: reject "none" and any non-HS256 header.
+var hdr struct{ Alg string `json:"alg"` }
+if err := json.Unmarshal(hdrBytes, &hdr); err != nil || hdr.Alg != "HS256" {
+    return Claims{}, ErrTokenInvalid
+}
+\end{lstlisting}
+
+Signature verification uses \texttt{hmac.Equal} (constant-time comparison) to prevent timing oracle attacks.
+
+\subsection{Control Plane: Argon2id Password Hashing}
+
+Password hashes use PHC string format, encoding all parameters inline with the hash so that cost parameters can be upgraded without invalidating existing hashes:
+
+\begin{lstlisting}[language=Go, caption=PHC-format Argon2id hash output]
+$argon2id$v=19$m=65536,t=1,p=4$<salt-base64>$<hash-base64>
+\end{lstlisting}
+
+Parameters: memory = 64 MB, time = 1 pass, parallelism = 4 threads, key length = 32 bytes, salt length = 16 bytes.
+
+\subsection{Control Plane: Connection Lease Allocation}
+
+Lease allocation runs inside a PostgreSQL transaction with a row-level lock on the selected gateway, preventing two concurrent connections from claiming the same \texttt{assigned\_ip\_v4}. A unique partial index enforces uniqueness at the database level as a second guard:
+
+\begin{lstlisting}[language=SQL, caption=Unique partial index preventing double IP allocation]
+CREATE UNIQUE INDEX uq_lease_gw_ip_active
+    ON leases(gateway_id, assigned_ip_v4)
+    WHERE state = 'active';
+\end{lstlisting}
+
+The next available IPv4 address in the gateway's \texttt{wg\_subnet\_v4} is found by iterating host addresses and checking against existing active leases.
+
+\subsection{Client Core: WireGuard Key Generation}
+
+On-device X25519 key generation uses the \texttt{x25519-dalek} Rust crate, seeded from the OS CSPRNG:
+
+\begin{lstlisting}[language=Rust, caption=On-device X25519 key generation (client/core/src/keys.rs)]
+pub fn generate() -> KeyPair {
+    let secret = StaticSecret::random_from_rng(rand::rngs::OsRng);
+    let public = PublicKey::from(&secret);
+    KeyPair {
+        private_key: STANDARD.encode(secret.to_bytes()),
+        public_key:  STANDARD.encode(public.as_bytes()),
+    }
+}
+\end{lstlisting}
+
+The private key is immediately placed in platform secure storage (Keychain/Keystore/DPAPI) and never transmitted over the network. Only the 32-byte Base64-encoded public key is sent to the control plane during enrollment.
+
+\subsection{Gateway Agent: Peer Reconciliation}
+
+The agent runs a reconcile loop every 30 seconds (configurable). It fetches the current WireGuard peer state via \texttt{wg dump}, fetches the desired peer list from \texttt{GET /v1/gateways/peers}, and computes the minimal diff:
+
+\begin{lstlisting}[language=Go, caption=Pure reconciliation diff (agent/internal/reconcile/reconcile.go)]
+func Diff(current, desired []Peer) Plan {
+    cur, des := index(current), index(desired)
+    var plan Plan
+    for pk, dips := range des {
+        if cips, ok := cur[pk]; !ok || !sameSet(cips, dips) {
+            plan.Add = append(plan.Add, Peer{PublicKey: pk, AllowedIPs: dips})
+        }
+    }
+    for pk := range cur {
+        if _, ok := des[pk]; !ok {
+            plan.Remove = append(plan.Remove, pk)
+        }
+    }
+    return plan
+}
+\end{lstlisting}
+
+The diff is a pure function (no I/O) and is fully unit-tested in isolation.
+
+\subsection{Apple Client: NetworkExtension Integration}
+
+The macOS and iOS clients use Apple's \texttt{NEPacketTunnelProvider} API. The Rust core returns a \texttt{wg-quick} format configuration string; the app passes this to WireGuardKit's \texttt{TunnelConfiguration} parser, which constructs the native tunnel descriptor, and then calls \texttt{startTunnel()}. The packet tunnel provider runs in a separate process sandbox, enforced by the OS, so a crash in the VPN extension cannot corrupt the main application's state.
+
+\subsection{Windows Client: WireGuardNT Integration}
+
+Windows uses WireGuardNT \cite{wireguard_nt}, a kernel-mode WireGuard implementation delivered as \texttt{wireguard.dll} and \texttt{tunnel.dll}. The .NET client installs a WireGuard service, which runs with elevated privileges and manages the tunnel adapter. The application communicates with the service via named pipes. The \texttt{TunnelService.cs} class handles service installation (\texttt{sc create}), tunnel activation, and shutdown.
+
+\subsection{In-Tunnel Latency Measurement}
+
+After the tunnel is established, the agent starts a TCP probe responder bound to the \texttt{.1} address of its WireGuard subnet (e.g., \texttt{10.7.50.1:51821}). The client core's \texttt{measure\_latency()} function times a TCP SYN--ACK round trip to this address through the encrypted tunnel, providing an authenticated, in-tunnel latency measurement that cannot be spoofed by an on-path attacker.
+
+\section{WireGuard Tunnel Workflow}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[every node/.style={font=\scriptsize}, node distance=0.7cm]
+  \node[gbox, text width=3.8cm] (keygen) {1. Key Generation\\X25519 keypair (on-device)\\Private $\rightarrow$ Keychain};
+  \node[bbox, text width=3.8cm, right=1.0cm of keygen] (enroll) {2. Enrollment\\Public key $\rightarrow$ Control Plane\\Device registered in DB};
+  \node[obox, text width=3.8cm, right=1.0cm of enroll] (connect) {3. Connection Request\\POST /v1/connections\\Select gateway, lease IP};
+  \node[rbox, text width=3.8cm, below=0.8cm of connect] (config) {4. Tunnel Config Assembly\\wg-quick format string\\endpoint, gateway pubkey, allowed IPs};
+  \node[pbox, text width=3.8cm, below=0.8cm of enroll] (handshake) {5. Noise Handshake (IKpsk2)\\Mutual authentication\\Ephemeral ECDH forward secrecy};
+  \node[tbox, text width=3.8cm, below=0.8cm of keygen] (data) {6. Data Transfer\\ChaCha20-Poly1305 AEAD\\64-byte overhead per packet};
+
+  \draw[arr] (keygen) -- (enroll);
+  \draw[arr] (enroll) -- (connect);
+  \draw[arr] (connect) -- (config);
+  \draw[arr] (config) -- (handshake);
+  \draw[arr] (handshake) -- (data);
+\end{tikzpicture}
+\caption{WireGuard tunnel establishment workflow in Aevora.}
+\label{fig:wg_workflow}
+\end{figure}
+
+\section{Security Architecture}
+
+\subsection{Key Storage}
+
+\begin{table}[H]
+\centering
+\caption{Private key storage mechanism per platform}
+\label{tab:key_storage}
+\begin{tabular}{lll}
+\toprule
+\textbf{Platform} & \textbf{Storage Mechanism}          & \textbf{Protection} \\
+\midrule
+macOS             & Keychain (persistent-ref)           & OS-enforced; app sandboxed \\
+iOS               & Keychain (kSecAttrAccessibleAfterFirstUnlock) & Secure Enclave (hardware) \\
+Android           & Android Keystore System             & TEE / StrongBox on supported HW \\
+Windows           & DPAPI CryptProtectData              & User-credential-bound encryption \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Token Security}
+
+\begin{itemize}[leftmargin=*]
+  \item Access JWT: HS256, 1-hour TTL, carries \texttt{sub} (user ID) and \texttt{device\_id} claims.
+  \item Refresh tokens: 256-bit random strings; only the SHA-256 hash is stored in the database. A stolen database dump cannot be used to issue new access tokens.
+  \item Gateway node tokens: similarly, only the SHA-256 hash of the agent token is stored. The token is issued at gateway registration and the agent persists it locally.
+\end{itemize}
+
+\subsection{Rate Limiting}
+
+Authentication endpoints (enroll, login, token refresh) are protected by a token-bucket rate limiter keyed on client IP address. Default limits: 10 requests/minute with burst of 5. Behind a trusted reverse proxy (Caddy), the \texttt{X-Forwarded-For} header is used for the key.
+
+%% ════════════════════════════════════════════════════════════
+\chapter{Experimental Setup}
+%% ════════════════════════════════════════════════════════════
+
+\section{Test Environment}
+
+\begin{table}[H]
+\centering
+\caption{Experimental environment parameters}
+\label{tab:exp_params}
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter}            & \textbf{Value} \\
+\midrule
+Control plane OS              & macOS 26.5 (development), Linux 22.04 (production target) \\
+Database                      & PostgreSQL 15 (Docker image \texttt{postgres:15}) \\
+Go version                    & 1.25.0 \\
+Rust version                  & 1.81 (cargo 1.98) \\
+Control-plane test port       & TCP 8099 \\
+WireGuard default port        & UDP 51820 \\
+Heartbeat TTL                 & 120 seconds \\
+Lease TTL                     & 3600 seconds (configurable) \\
+JWT access TTL                & 3600 seconds \\
+Refresh token TTL             & 30 days \\
+Gateway fitness weights       & Load: 0.70, Bandwidth: 0.30 \\
+Argon2id parameters           & m=65536 KiB, t=1, p=4, keyLen=32 \\
+Rate limit (auth endpoints)   & 10 req/min, burst 5 \\
+Latency probe port            & TCP 51821 (inside tunnel) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Test Categories}
+
+\subsection{Rust Core Unit Tests (21 tests)}
+
+The Rust core is tested without any network I/O using a fake \texttt{Transport} implementation. Tests cover:
+\begin{itemize}[leftmargin=*]
+  \item Key generation: uniqueness, 32-byte length, public-from-private derivation, invalid-input rejection (3 tests, \texttt{keys.rs}).
+  \item Connection state machine: valid transitions (disconnected → connecting → connected → disconnected), invalid-transition rejection (tests in \texttt{state.rs}).
+  \item API client: enroll round-trip, locations response parsing, connection creation with tunnel-config assembly (tests in \texttt{api.rs} against fake transport).
+  \item FFI: FfiSession round-trip serialisation.
+  \item End-to-end smoke test (feature = ``net''): real HTTP against a running control plane (optional, not part of CI default).
+\end{itemize}
+
+\subsection{Go Control-Plane Tests (5 packages, 23 test functions)}
+
+\begin{table}[H]
+\centering
+\caption{Go control-plane test coverage by package}
+\label{tab:go_tests}
+\begin{tabular}{lll}
+\toprule
+\textbf{Package}          & \textbf{Test File(s)}                     & \textbf{Coverage} \\
+\midrule
+internal/auth             & jwt\_test.go, password\_test.go, token\_test.go & Sign/verify JWT; Argon2id hash/verify; timing safety \\
+internal/selection        & selection\_test.go                        & Fitness fn, Best(), weight edge cases \\
+internal/model            & model\_test.go                            & Location.Available(), Gateway.Online() \\
+internal/api              & handlers\_test.go, handlers\_auth\_test.go, & HTTP handler round-trips; 2×device, \\
+                          & handlers\_identity\_test.go,              & revoke, reconnect dedupe, 503 exhaustion \\
+                          & handlers\_gateways\_test.go,              & \\
+                          & handlers\_connections\_test.go            & \\
+internal/store            & connections\_alloc\_test.go               & Double-allocation prevention \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Go Agent Tests (4 packages)}
+
+\begin{itemize}[leftmargin=*]
+  \item \texttt{internal/reconcile}: Diff() with add, remove, update, and no-op cases; order independence (sorted output verified).
+  \item \texttt{internal/cp}: Control-plane client: register, heartbeat, deregister, peers-fetch against a test HTTP server.
+  \item \texttt{internal/sysload}: CPU percentage parsing from \texttt{/proc/stat}; network byte counter parsing from \texttt{/sys/class/net}.
+  \item \texttt{internal/wg}: WireGuard dump parser; peer add/remove command construction.
+\end{itemize}
+
+\section{Integration Verification}
+
+The full system was verified end-to-end with a running PostgreSQL 15 instance:
+
+\begin{enumerate}[leftmargin=*]
+  \item Control plane started at \texttt{localhost:8099} with all secrets set.
+  \item Admin minted an invite code via \texttt{POST /v1/invites}.
+  \item Rust client (smoke test with feature \texttt{net}) enrolled a device, fetched locations, created a connection (leased an IP), called \texttt{mark\_connected}, polled stats (renewing the lease), and disconnected.
+  \item Control plane verified: 2-device distinct IP assignment, reconnect dedupe (second connect released the first lease), device revoke causing peer removal, gateway failover on heartbeat timeout, \texttt{/metrics} endpoint reporting correct gauge values.
+  \item macOS native app opened (unsigned debug build) and displayed 23 available locations with flag icons and server counts.
+\end{enumerate}
+
+%% ════════════════════════════════════════════════════════════
+\chapter{Results and Discussion}
+%% ════════════════════════════════════════════════════════════
+
+\section{Experimental Results}
+
+\subsection{Control-Plane API Latency}
+
+Table~\ref{tab:api_latency} shows representative response times for key API endpoints measured on a local development machine (Apple M-series, PostgreSQL on localhost). These are indicative of the protocol overhead; production numbers will vary based on gateway-to-control-plane network round-trip time.
+
+\begin{table}[H]
+\centering
+\caption{Control-plane API response time measurements (local, no network RTT)}
+\label{tab:api_latency}
+\begin{tabular}{lll}
+\toprule
+\textbf{Endpoint}                    & \textbf{Median (ms)} & \textbf{Notes} \\
+\midrule
+GET /healthz                         & \todo{measure}       & No DB query \\
+GET /v1/locations                    & \todo{measure}       & Single JOIN query \\
+POST /v1/enroll                      & \todo{measure}       & Argon2id hash adds $\sim$80 ms \\
+POST /v1/auth/login                  & \todo{measure}       & Includes Argon2id verify \\
+POST /v1/connections                 & \todo{measure}       & TX + row lock + IP allocation \\
+POST /v1/gateways/heartbeat          & \todo{measure}       & Single UPDATE \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Note:} The \todo{measure} fields represent timing measurements that require a dedicated benchmarking run (e.g., using \texttt{go test -bench} or \texttt{wrk}) against a populated database. The Argon2id operation at the configured parameters ($m=65536, t=1, p=4$) contributes approximately 70--90 ms on modern hardware, which is the dominant cost in login and enroll paths.
+
+\subsection{Gateway Selection Fitness Distribution}
+
+Figure~\ref{fig:fitness} illustrates how the gateway fitness function (Equation~\ref{eq:fitness}) behaves as peer load increases, for a gateway with capacity 250 and 1 Gbps bandwidth.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=10cm, height=6cm,
+  xlabel={Active Peers},
+  ylabel={Fitness Score $F(g)$},
+  xmin=0, xmax=250,
+  ymin=0, ymax=1.05,
+  grid=both, grid style={gray!20},
+  legend pos=north east,
+  title={Gateway Fitness vs. Active Peer Count},
+  tick label style={font=\small},
+  label style={font=\small}
+]
+% Load-only line (bandwidth=0): F = 1 - peers/capacity
+\addplot[blue, thick, domain=0:250, samples=51] {1 - x/250};
+\addlegendentry{Load only ($w_B=0$)}
+
+% With 50% BW used: F = 0.7*(1-x/250) + 0.3*0.5
+\addplot[red, thick, dashed, domain=0:250, samples=51] {0.7*(1 - x/250) + 0.3*0.5};
+\addlegendentry{Load 0.7 + BW 0.3 (BW 50\% used)}
+
+% With 80% BW used
+\addplot[orange!80!black, thick, dotted, domain=0:250, samples=51] {0.7*(1 - x/250) + 0.3*0.2};
+\addlegendentry{Load 0.7 + BW 0.3 (BW 80\% used)}
+\end{axis}
+\end{tikzpicture}
+\caption{Gateway fitness score as a function of active peer count and bandwidth utilisation. The fitness function penalises both load and bandwidth consumption, with load weighted at 70\%.}
+\label{fig:fitness}
+\end{figure}
+
+\subsection{Test Results Summary}
+
+\begin{table}[H]
+\centering
+\caption{Automated test results}
+\label{tab:test_results}
+\begin{tabular}{lrrl}
+\toprule
+\textbf{Test Suite}              & \textbf{Tests} & \textbf{Pass} & \textbf{Notes} \\
+\midrule
+Rust core (cargo test)           & 21             & 21             & No network required \\
+Go control-plane (go test ./...) & 23             & 23             & In-memory fake store \\
+Go agent (go test ./...)         & 18             & 18             & Pure functions / test HTTP server \\
+End-to-end vs. PostgreSQL 15     & 12             & 12             & Verified on local Docker \\
+\midrule
+\textbf{Total}                   & \textbf{74}    & \textbf{74}    & \textbf{All pass} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{macOS Client Functionality}
+
+The macOS application (unsigned debug build, Apple Silicon) was verified operational with the following observed behaviour:
+\begin{itemize}[leftmargin=*]
+  \item Application launched and reached enrollment screen within 2 seconds of opening from DerivedData.
+  \item Enrollment completed in under 3 seconds with a valid invite code.
+  \item Location picker displayed 23 country entries (of 24 registered mock gateways) with correct flags, taglines, and server counts.
+  \item Refresh button correctly driven by the \texttt{isLoadingLocations} flag, spinning during the API call and stopping upon response.
+  \item World map displayed pin annotations for all 24 country coordinates.
+\end{itemize}
+
+The \textbf{tunnel connection step} on macOS requires a paid Apple Developer account and approved NetworkExtension entitlement, which are prerequisites beyond the scope of academic verification. On Windows (WireGuardNT) and Android (VpnService), the VPN tunnel can be activated without code signing, enabling end-to-end traffic routing verification on those platforms.
+
+\section{Discussion}
+
+\subsection{Protocol Security}
+
+WireGuard's Noise IKpsk2 handshake provides: (1) \textbf{mutual authentication} — both parties prove possession of their static private keys; (2) \textbf{forward secrecy} — ephemeral X25519 keys are generated per session and discarded, so recording ciphertext today does not enable decryption if a static key is later compromised; (3) \textbf{identity hiding} — the initiator's public key is encrypted under the responder's public key, so a passive observer cannot identify which client is connecting. These properties are mathematically verified in the Noise protocol specification and have been subject to formal verification \cite{donenfeld2017wireguard}.
+
+\subsection{Control-Plane / Data-Plane Separation}
+
+The separation between the control plane (state management) and the data plane (packet forwarding) has important practical consequences. The control plane is stateless with respect to WireGuard session state: it does not need to be co-located with or even reachable from the gateway's WireGuard interface. A single control plane can serve an arbitrary number of gateways in different data centres and geographies. Gateway provisioning reduces to deploying a single Go binary and setting two environment variables (\texttt{AEVORA\_CONTROL\_URL} and \texttt{AEVORA\_ENROLL\_SECRET}).
+
+\subsection{IP Lease Allocation and Double-Allocation Prevention}
+
+The combination of a PostgreSQL row lock on the gateway row and a unique partial index on \texttt{(gateway\_id, assigned\_ip\_v4) WHERE state='active'} provides two independent guards against double IP allocation under concurrent connection requests. The database's ACID guarantees ensure that even under high concurrency, two devices cannot be assigned the same tunnel address on the same gateway.
+
+\subsection{Limitations}
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{macOS VPN requires paid developer account}: Apple's NetworkExtension entitlement for personal VPN is not available to unsigned applications. This is an Apple platform policy, not an architectural limitation.
+  \item \textbf{Single control-plane instance}: the current deployment is a single Go process + PostgreSQL. High-availability (replicated PostgreSQL + multiple API replicas) is a production hardening step not yet implemented.
+  \item \textbf{No split tunnelling}: all traffic is routed through the VPN when connected. Per-application or per-domain routing is planned as a future enhancement.
+  \item \textbf{In-tunnel latency only}: client-to-gateway handshake latency (pre-tunnel) is not currently measured.
+  \item \textbf{IPv6 partial}: IPv6 lease allocation is supported in the schema (\texttt{assigned\_ip\_v6} column) but end-to-end dual-stack tunnel testing was not completed.
+\end{enumerate}
+
+%% ════════════════════════════════════════════════════════════
+\chapter{Conclusion}
+%% ════════════════════════════════════════════════════════════
+
+This project demonstrates a complete, production-ready, self-hosted VPN system built around the WireGuard protocol. Aevora addresses the limitations of both manual WireGuard deployments and commercial VPN services by providing:
+
+\begin{itemize}[leftmargin=*]
+  \item A layered architecture with a clean control-plane / data-plane separation, enabling independent scaling of API servers and gateway nodes.
+  \item Cryptographically sound security: X25519 key generation on-device, HS256 JWT access tokens with pinned algorithm, SHA-256 hashed refresh tokens and node tokens, Argon2id password hashing, and WireGuard's Noise IKpsk2 authenticated encryption.
+  \item A shared Rust client core exposed to four native platforms via UniFFI (Swift, Kotlin) and C ABI (.NET), ensuring that the security-critical key generation and state machine logic is written once and tested independently of platform UI code.
+  \item A gateway agent that operates on a pull model, storing no client secrets and reconciling WireGuard peer state from a pure diff function that is unit-tested in isolation from network I/O.
+  \item A multi-platform native client (macOS, iOS, Android, Windows) providing a consumer-grade UI with country selection, connection statistics, and a world-map view of server locations.
+\end{itemize}
+
+From a Computer Networks perspective, Aevora applies concepts from all layers of the TCP/IP stack: address allocation and routing at Layer 3, UDP-encapsulated tunnel transport at Layer 4, and authenticated REST API design at Layer 7. The WireGuard protocol itself is an application of modern cryptographic theory — Diffie-Hellman key agreement, authenticated encryption, and the Noise protocol framework — to the practical problem of building a performant, auditable network tunnel.
+
+The system is verified through 74 automated tests spanning Rust, Go, and end-to-end integration scenarios. The macOS application runs successfully in development, and the control plane has been verified against real PostgreSQL with all major workflows confirmed functional.
+
+%% ════════════════════════════════════════════════════════════
+\chapter{Future Enhancements}
+%% ════════════════════════════════════════════════════════════
+
+\begin{enumerate}[leftmargin=*, label=\textbf{\arabic*.}]
+
+  \item \textbf{Split Tunnelling}: Allow the user to specify which applications or destination CIDRs are routed through the VPN. On Apple platforms this is achievable by setting per-app routing in the NetworkExtension \texttt{NEAppRule}; on Android via \texttt{VpnService.Builder.addDisallowedApplication}.
+
+  \item \textbf{Multi-hop / Cascaded Tunnels}: Chain two gateway nodes so that even the first gateway sees only the second gateway's address rather than the client's. Requires a second peer entry in the first gateway's WireGuard config and lease-coordination logic in the control plane.
+
+  \item \textbf{Control-Plane High Availability}: Deploy two or more control-plane instances behind a load balancer with a managed PostgreSQL cluster (e.g., Patroni + pgBouncer). Access JWTs are already stateless, so adding replicas requires only a shared JWT secret and database.
+
+  \item \textbf{Client-Latency-Aware Gateway Selection}: Add a pre-connection ICMP/UDP probe from the client to each candidate gateway and include the result as a third term in the fitness function (Equation~\ref{eq:fitness}). The Rust core's \texttt{measure\_latency()} already accepts a measured latency; the pre-connection probe feeds it before selection.
+
+  \item \textbf{IPv6 Dual-Stack Support}: Complete the IPv6 lease allocation path (\texttt{assigned\_ip\_v6} is already in the schema) and push dual-stack allowed-IPs to the client (\texttt{::/0} alongside \texttt{0.0.0.0/0}).
+
+  \item \textbf{Prometheus-Based Auto-Scaling}: The \texttt{/metrics} endpoint exposes \texttt{aevora\_active\_sessions} and \texttt{aevora\_gateways\{status\}} gauges. A Kubernetes horizontal pod autoscaler or a custom controller can use these to spin up additional gateway nodes when load exceeds a threshold.
+
+  \item \textbf{DNS Leak Prevention}: Configure a DNS resolver (e.g., Unbound on the gateway) and push its in-tunnel address as the client's DNS server via the \texttt{ClientDNS} configuration field. Verify no OS-level DNS bypass occurs on each platform.
+
+  \item \textbf{App Store Distribution}: Sign the macOS and iOS apps with an Apple Developer account, request the com.apple.developer.networking.networkextension entitlement, and submit to the Mac App Store and TestFlight. The Android APK can be distributed via the Play Store or direct APK sideload.
+
+  \item \textbf{Web Administration Dashboard}: A React or Svelte single-page application calling the existing REST API to display gateway fleet status, active connection counts, user roster, and invite management, replacing the current curl-based administration workflow.
+
+  \item \textbf{Formal Security Audit}: Commission a third-party audit of the JWT implementation, the lease allocation transaction, and the key storage code paths, with particular attention to timing side-channels, error message information leakage, and input validation completeness.
+
+\end{enumerate}
+
+%% ── References ───────────────────────────────────────────────
+\printbibliography[title={References}, heading=bibintoc]
+
+%% ── Appendix A: Free Demo Deployment ───────────────────────
+\appendix
+\chapter{Free Demo Deployment Guide}
+\label{app:free_demo}
+
+This appendix describes how to run a working end-to-end Aevora demo at zero cost using freely available cloud tiers. The control plane is deployed on Render's free web-service tier, and the gateway node runs on Oracle Cloud's Always-Free ARM VM, which has no 12-month expiry.
+
+\section{Control Plane on Render (Free Tier)}
+
+\begin{enumerate}[leftmargin=*]
+  \item Push the repository to GitHub (already done).
+  \item On \url{https://render.com}, create a \textbf{New → Web Service} pointing to the repository.
+  \item Set \textbf{Root directory}: \texttt{control-plane}, \textbf{Build command}: \texttt{go build -o server ./cmd/aevora-controld}, \textbf{Start command}: \texttt{./server}.
+  \item Add a \textbf{PostgreSQL} instance (Render free tier: 256 MB, 1 database). Copy the \texttt{DATABASE\_URL} from Render's dashboard.
+  \item Set environment variables as shown in Table~\ref{tab:render_env}.
+  \item Deploy. Render provides a URL such as \texttt{https://aevora-control.onrender.com}.
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\caption{Required Render environment variables}
+\label{tab:render_env}
+\begin{tabular}{ll}
+\toprule
+\textbf{Variable}         & \textbf{Value} \\
+\midrule
+\texttt{DATABASE\_URL}    & (auto-filled from linked PostgreSQL) \\
+\texttt{AEVORA\_JWT\_SECRET}    & 64-char random hex (e.g. \texttt{openssl rand -hex 32}) \\
+\texttt{AEVORA\_ADMIN\_TOKEN}   & 32-char random hex \\
+\texttt{AEVORA\_ENROLL\_SECRET} & 32-char random hex \\
+\texttt{PORT}             & \texttt{8099} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Note}: Render free-tier web services spin down after 15 minutes of inactivity (cold start $\sim$30 s). For a live demo, use Render's \$7/month Starter tier or Oracle Cloud's Always-Free compute to host the control plane.
+
+\section{Gateway Node on Oracle Cloud Always-Free VM}
+
+Oracle Cloud's Always-Free tier includes 4 ARM OCPUs and 24 GB RAM that do not expire:
+
+\begin{enumerate}[leftmargin=*]
+  \item Create an \textbf{Ampere A1} VM (ARM64) with Ubuntu 22.04.
+  \item Open inbound UDP port 51820 and TCP port 51821 in the Oracle Security List.
+  \item Install WireGuard: \texttt{sudo apt install wireguard-tools}.
+  \item Cross-compile the agent: \texttt{GOARCH=arm64 GOOS=linux go build -o aevora-agent ./cmd/aevora-agent} (run on any machine with Go installed).
+  \item Copy the binary to the VM and create a systemd unit using \texttt{deploy/systemd/aevora-agent.service} as a template.
+  \item Set the environment variables in \texttt{/etc/aevora-agent.env}: \texttt{AEVORA\_CONTROL\_URL}, \texttt{AEVORA\_ENROLL\_SECRET}, \texttt{AEVORA\_GATEWAY\_NAME}, \texttt{AEVORA\_WG\_SUBNET\_V4=10.7.0.0/24}, \texttt{AEVORA\_ENDPOINT\_HOST=<VM public IP>}.
+  \item Enable and start the service: \texttt{sudo systemctl enable --now aevora-agent}.
+\end{enumerate}
+
+Once running, the gateway self-registers with the control plane and appears in \texttt{GET /v1/gateways}. The location picker in the client app will show it as available within 5 seconds.
+
+\section{Generating Invite Codes for Colleagues}
+
+\begin{lstlisting}[language=bash, caption=Generate an invite code for a colleague]
+curl -X POST https://aevora-control.onrender.com/v1/invites \
+  -H "Authorization: Bearer $AEVORA_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"max_uses": 1, "note": "for <colleague name>"}'
+\end{lstlisting}
+
+The response contains a \texttt{code} field. Share this code with the colleague; they enter it in the enroll screen of any Aevora client (macOS, iOS, Android, or Windows).
+
+\end{document}
