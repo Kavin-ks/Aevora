@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -9,6 +10,8 @@ namespace Aevora;
 
 public enum Phase { NeedsEnrollment, Disconnected, Connecting, Connected, Failed }
 
+
+
 // MVVM view model. All auth/API/selection/lease/key/stats logic is in the shared
 // Rust core (AevoraCore); this class orchestrates, runs the real WireGuardNT
 // tunnel via TunnelService, and formats for the UI. No simulated state or stats.
@@ -16,6 +19,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 {
     private readonly AevoraCore _core;
     private readonly DispatcherTimer _statsTimer;
+    private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(5) };
 
     public ObservableCollection<Location> Locations { get; } = new();
 
@@ -47,6 +51,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private string? _error;
     public string? Error { get => _error; private set { _error = value; Raise(); } }
 
+    private string _publicIp = "Fetching…";
+    public string PublicIp { get => _publicIp; private set { _publicIp = value; Raise(); } }
+
     public MainViewModel(string controlUrl)
     {
         _core = new AevoraCore(controlUrl);
@@ -60,6 +67,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Phase = Phase.Disconnected;
             _ = LoadLocationsAsync();
         }
+        _ = RefreshPublicIpAsync();
+    }
+
+    public async Task RefreshPublicIpAsync()
+    {
+        try
+        {
+            string ip = await _http.GetStringAsync("https://api.ipify.org");
+            PublicIp = ip.Trim();
+        }
+        catch { PublicIp = "unavailable"; }
     }
 
     public async Task EnrollAsync(string invite, string email)
@@ -96,11 +114,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
             ServerName = conn.Server_name;
             Phase = Phase.Connected;
             _statsTimer.Start();
+            _ = RefreshPublicIpAsync();
         }
         catch (Exception e)
         {
             Phase = Phase.Failed; Error = e.Message;
             try { TunnelService.Disconnect(); } catch { }
+            _ = RefreshPublicIpAsync();
         }
     }
 
@@ -115,6 +135,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         ServerName = "";
         Phase = Phase.Disconnected;
         Duration = "00:00:00"; Latency = "—"; Download = "—"; Upload = "—";
+        _ = RefreshPublicIpAsync();
     }
 
     private void UpdateStats()

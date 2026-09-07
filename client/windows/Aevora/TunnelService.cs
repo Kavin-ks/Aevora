@@ -64,8 +64,7 @@ public static class TunnelService
             try
             {
                 if (!WireGuardGetConfiguration(adapter, buf, ref size)) return false;
-                SumPeerTransfer(buf, out rx, out tx);
-                return true;
+                return SumPeerTransfer(buf, size, out rx, out tx);
             }
             finally { Marshal.FreeHGlobal(buf); }
         }
@@ -73,20 +72,28 @@ public static class TunnelService
     }
 
     // Parses the WIREGUARD_INTERFACE + WIREGUARD_PEER[] buffer and sums transfer.
-    private static void SumPeerTransfer(IntPtr buf, out ulong rx, out ulong tx)
+    private static bool SumPeerTransfer(IntPtr buf, uint bufferSize, out ulong rx, out ulong tx)
     {
         rx = 0; tx = 0;
-        // WIREGUARD_INTERFACE: Flags(4) ListenPort(2) +pad(2) PrivateKey(32) PublicKey(32) PeersCount(4) +pad
-        uint peers = (uint)Marshal.ReadInt32(buf, 4 + 4 + 32 + 32);
-        int ifaceSize = 4 + 4 + 32 + 32 + 8; // aligned interface header
+        const int peerCountOffset = 70;
+        int ifaceSize = 72; // WIREGUARD_INTERFACE, aligned to 8 bytes
         int peerSize = Marshal.SizeOf<WireGuardPeer>();
-        IntPtr p = IntPtr.Add(buf, ifaceSize);
+        int allowedIpSize = Marshal.SizeOf<WireGuardAllowedIp>();
+        if (bufferSize < ifaceSize || bufferSize < peerCountOffset + sizeof(uint)) return false;
+
+        uint peers = (uint)Marshal.ReadInt32(buf, peerCountOffset);
+        ulong offset = (uint)ifaceSize;
         for (uint i = 0; i < peers; i++)
         {
-            var peer = Marshal.PtrToStructure<WireGuardPeer>(p);
+            if (offset > bufferSize || bufferSize - offset < (uint)peerSize) return false;
+            var peer = Marshal.PtrToStructure<WireGuardPeer>(IntPtr.Add(buf, checked((int)offset)));
             rx += peer.RxBytes; tx += peer.TxBytes;
-            p = IntPtr.Add(p, peerSize + (int)(peer.AllowedIPsCount * (uint)Marshal.SizeOf<WireGuardAllowedIp>()));
+            ulong allowedBytes = (ulong)peer.AllowedIPsCount * (uint)allowedIpSize;
+            ulong nextOffset = offset + (uint)peerSize + allowedBytes;
+            if (nextOffset > bufferSize) return false;
+            offset = nextOffset;
         }
+        return true;
     }
 
     private static string WgQuick(TunnelConfig c)
@@ -106,18 +113,18 @@ public static class TunnelService
     }
 
     // --- native declarations ---
-    [DllImport("tunnel.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.I1)]
+    [DllImport("tunnel.dll", CharSet = CharSet.Unicode, SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool WireGuardTunnelService([MarshalAs(UnmanagedType.LPWStr)] string confFile);
 
-    [DllImport("wireguard.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [DllImport("wireguard.dll", CharSet = CharSet.Unicode, SetLastError = true, CallingConvention = CallingConvention.Winapi)]
     private static extern IntPtr WireGuardOpenAdapter([MarshalAs(UnmanagedType.LPWStr)] string name);
 
-    [DllImport("wireguard.dll")]
+    [DllImport("wireguard.dll", CallingConvention = CallingConvention.Winapi)]
     private static extern void WireGuardCloseAdapter(IntPtr adapter);
 
-    [DllImport("wireguard.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.I1)]
+    [DllImport("wireguard.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool WireGuardGetConfiguration(IntPtr adapter, IntPtr iface, ref uint bytes);
 }
 
@@ -144,4 +151,5 @@ internal struct WireGuardAllowedIp
     [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] Address;
     public ushort AddressFamily;
     public byte Cidr;
+    public uint Flags;
 }

@@ -15,7 +15,8 @@ internal static class ServiceManager
     {
         // Remove any stale instance first.
         StopAndRemove(name);
-        Sc($"create {name} binPath= {binPath} type= own start= demand");
+        Sc($"create {name} binPath= {binPath} type= own start= demand depend= Nsi/Tcpip");
+        Sc($"sidtype {name} unrestricted");
         Sc($"start {name}");
         WaitForStatus(name, ServiceControllerStatus.Running, TimeSpan.FromSeconds(15));
     }
@@ -32,7 +33,10 @@ internal static class ServiceManager
                 sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(15));
             }
         }
-        catch { /* ignore */ }
+        catch (InvalidOperationException) when (!Exists(name))
+        {
+            return;
+        }
         Sc($"delete {name}");
     }
 
@@ -59,8 +63,17 @@ internal static class ServiceManager
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        using var p = Process.Start(psi)!;
+        using var p = Process.Start(psi)
+            ?? throw new InvalidOperationException("Unable to start sc.exe.");
+        string stdout = p.StandardOutput.ReadToEnd();
+        string stderr = p.StandardError.ReadToEnd();
         p.WaitForExit();
         Thread.Sleep(200); // let the SCM settle between operations
+        if (p.ExitCode != 0)
+        {
+            string detail = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
+            throw new InvalidOperationException(
+                $"sc.exe failed with exit code {p.ExitCode}: {detail.Trim()}");
+        }
     }
 }

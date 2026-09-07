@@ -23,6 +23,7 @@
          tunnel.dll + wireguard.dll from WireGuard for Windows. -->
     <None Include="native\*.dll" Condition="Exists('native')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
     </None>
   </ItemGroup>
 

@@ -2,6 +2,11 @@
 #   cd deploy && docker compose up --build
 #   curl localhost:8080/healthz
 #   curl localhost:8080/v1/locations
+#
+# Auth secrets (dev-only — change ALL of these for production):
+#   AEVORA_JWT_SECRET        : signs user access tokens
+#   AEVORA_ENROLLMENT_SECRET : used by the node agent to register gateways
+#   AEVORA_ADMIN_TOKEN       : used to create invite codes via POST /v1/invites
 services:
   postgres:
     image: postgres:16-alpine
@@ -26,6 +31,16 @@ services:
       AEVORA_LISTEN_ADDR: ":8080"
       AEVORA_DB_URL: "postgres://aevora:aevora@postgres:5432/aevora?sslmode=disable"
       AEVORA_DEV_SEED: "1"
+      # Dev-only secrets (non-empty enables auth features):
+      AEVORA_JWT_SECRET: "dev-jwt-secret-local-only-change-in-prod"
+      AEVORA_ENROLLMENT_SECRET: "dev-enrollment-secret-local-only"
+      AEVORA_ADMIN_TOKEN: "dev-admin-token-local-only"
+      AEVORA_HEARTBEAT_TTL: "30s"
+      AEVORA_REAPER_INTERVAL: "10s"
+      AEVORA_ACCESS_TTL: "15m"
+      AEVORA_REFRESH_TTL: "720h"
+      AEVORA_LEASE_TTL: "5m"
+      AEVORA_CLIENT_DNS: "9.9.9.9,149.112.112.112"
     ports:
       - "8080:8080"
     depends_on:

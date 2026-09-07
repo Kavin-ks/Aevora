@@ -18,6 +18,8 @@ infra/gateway/clients/
 
 # WireGuard / VPN configs & keys
 **/*.conf
+**/real.conf
+**/client.conf
 wg*.conf
 **/*.key
 **/*.pub
@@ -70,9 +72,14 @@ client/android/app/src/main/java/uniffi/
 client/android/local.properties
 # .NET / Windows build outputs + native DLLs
 client/windows/Aevora/native/
+**/native/
 **/bin/
 **/obj/
+**/publish/
+client/windows/wg-extract/
 *.dll
+*.exe
+*.pdb
 control-plane/aevora-controld
 agent/aevora-agent
 *.test
