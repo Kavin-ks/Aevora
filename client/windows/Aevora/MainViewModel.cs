@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -20,11 +21,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly AevoraCore _core;
     private readonly DispatcherTimer _statsTimer;
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(5) };
+    private const string DirectServiceName = "AevoraTunnel";
+    private const string StatsLogPath = @"C:\AevoraDebug\stats-debug.log";
 
     public ObservableCollection<Location> Locations { get; } = new();
 
     private Phase _phase = Phase.NeedsEnrollment;
     public Phase Phase { get => _phase; private set { _phase = value; Raise(); Raise(nameof(StateText)); Raise(nameof(IsEnrolled)); Raise(nameof(IsConnected)); } }
+    public bool IsDirectMode { get; private set; }
 
     public string StateText => Phase switch
     {
@@ -47,6 +51,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string Latency { get => _latency; private set { _latency = value; Raise(); } }
     public string Download { get => _download; private set { _download = value; Raise(); } }
     public string Upload { get => _upload; private set { _upload = value; Raise(); } }
+    private DateTime? _connectedAt;
 
     private string? _error;
     public string? Error { get => _error; private set { _error = value; Raise(); } }
@@ -60,12 +65,23 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _statsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _statsTimer.Tick += (_, _) => UpdateStats();
 
-        var restored = SecureStore.Load();
-        if (restored is not null)
+        IsDirectMode = File.Exists(AppConfig.DirectConfigPath);
+        Raise(nameof(IsDirectMode));
+        WriteStatsLog($"[STATS] ViewModel initialized. BaseDirectory={AppContext.BaseDirectory}");
+
+        if (IsDirectMode)
         {
-            _core.Restore(restored);
             Phase = Phase.Disconnected;
-            _ = LoadLocationsAsync();
+        }
+        else
+        {
+            var restored = SecureStore.Load();
+            if (restored is not null)
+            {
+                _core.Restore(restored);
+                Phase = Phase.Disconnected;
+                _ = LoadLocationsAsync();
+            }
         }
         _ = RefreshPublicIpAsync();
     }
@@ -103,6 +119,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public async Task ConnectAsync()
     {
+        if (IsDirectMode)
+        {
+            await ConnectDirectAsync();
+            return;
+        }
+
         var country = SelectedCountry?.Code;
         if (country is null) return;
         Phase = Phase.Connecting; Error = null;
@@ -124,23 +146,112 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private async Task ConnectDirectAsync()
+    {
+        Phase = Phase.Connecting; Error = null;
+        try
+        {
+            await Task.Run(() => ServiceManager.InstallAndStart(
+                DirectServiceName,
+                $"\"{Environment.ProcessPath} /service {AppConfig.DirectConfigPath}\""));
+            ServerName = "Direct connection";
+            Phase = Phase.Connected;
+            _connectedAt = DateTime.UtcNow;
+            _statsTimer.Start();
+            WriteStatsLog("[STATS] Direct Mode connected; stats timer started.");
+            UpdateStats();
+            _ = RefreshPublicIpAsync();
+        }
+        catch (Exception e)
+        {
+            Phase = Phase.Failed; Error = e.Message;
+            try { ServiceManager.StopAndRemove(DirectServiceName); } catch { }
+            _ = RefreshPublicIpAsync();
+        }
+    }
+
     public async Task DisconnectAsync()
     {
         _statsTimer.Stop();
+        WriteStatsLog("[STATS] Disconnected; stats timer stopped.");
         await Task.Run(() =>
         {
-            try { TunnelService.Disconnect(); } catch { }
-            try { _core.Disconnect(); } catch { }
+            if (IsDirectMode)
+            {
+                try { ServiceManager.StopAndRemove(DirectServiceName); } catch { }
+            }
+            else
+            {
+                try { TunnelService.Disconnect(); } catch { }
+                try { _core.Disconnect(); } catch { }
+            }
         });
         ServerName = "";
         Phase = Phase.Disconnected;
+        _connectedAt = null;
         Duration = "00:00:00"; Latency = "—"; Download = "—"; Upload = "—";
         _ = RefreshPublicIpAsync();
     }
 
     private void UpdateStats()
     {
-        if (Phase != Phase.Connected) return;
+        if (Phase != Phase.Connected)
+        {
+            _statsTimer.Stop();
+            WriteStatsLog("[STATS] Timer tick while disconnected; timer stopped.");
+            return;
+        }
+
+        if (IsDirectMode)
+        {
+            DateTime connectedAt = _connectedAt ?? DateTime.UtcNow;
+            Duration = FormatDuration((ulong)Math.Max(0, (DateTime.UtcNow - connectedAt).TotalSeconds));
+            Latency = "—";
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    WriteStatsLog($"[STATS] Calling TryGetTransfer at {DateTime.Now:O}");
+                    foreach (var adapterName in new[] { "real", "AevoraTunnel", "WireGuard" })
+                    {
+                        WriteStatsLog($"[STATS] Checking adapter: {adapterName}");
+                    }
+
+                    bool available = TunnelService.TryGetTransfer(out ulong rx, out ulong tx);
+                    if (available)
+                    {
+                        WriteStatsLog($"[STATS] SUCCESS: rx={rx}, tx={tx}");
+                    }
+                    else
+                    {
+                        WriteStatsLog("[STATS] FAILED: TryGetTransfer returned false");
+                    }
+
+                    return (available, rx, tx);
+                }
+                catch (Exception ex)
+                {
+                    WriteStatsLog($"[STATS] EXCEPTION: {ex}");
+                    throw;
+                }
+            }).ContinueWith(t =>
+            {
+                if (!t.IsCompletedSuccessfully || Phase != Phase.Connected || !IsDirectMode) return;
+                if (t.Result.available)
+                {
+                    Download = FormatBytes(t.Result.rx);
+                    Upload = FormatBytes(t.Result.tx);
+                }
+                else
+                {
+                    Download = "—";
+                    Upload = "—";
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+            return;
+        }
+
         Task.Run(() =>
         {
             ulong rx = 0, tx = 0;
@@ -167,11 +278,40 @@ public sealed class MainViewModel : INotifyPropertyChanged
         catch (Exception e) { Error = e.Message; if (Phase == Phase.Connecting) Phase = Phase.Failed; }
     }
 
+    private static void WriteStatsLog(string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(StatsLogPath)!);
+            File.AppendAllText(StatsLogPath, $"{DateTime.Now:O} {message}{Environment.NewLine}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[STATS] LOGGING FAILED ({StatsLogPath}): {ex}");
+        }
+    }
+
     public static string FormatRate(ulong bytesPerSec)
     {
         double mbps = bytesPerSec * 8.0 / 1_000_000;
         return mbps >= 1 ? $"{mbps:F1} Mbps" : $"{bytesPerSec / 1024.0:F0} KB/s";
     }
+
+    public static string FormatBytes(ulong bytes)
+    {
+        if (bytes == 0) return "0 B";
+        string[] units = { "B", "KB", "MB", "GB", "TB" };
+        double value = bytes;
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+        return $"{value:0.0} {units[unit]}";
+    }
+
     public static string FormatDuration(ulong seconds)
     {
         long s = (long)seconds;

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace Aevora;
 
@@ -10,4 +11,7 @@ internal static class AppConfig
     public static string ControlUrl =>
         Environment.GetEnvironmentVariable("AEVORA_CONTROL_URL")?.Trim()
         is { Length: > 0 } url ? url : "http://localhost:8080";
+
+    public static string DirectConfigPath =>
+        Path.Combine(AppContext.BaseDirectory, "real.conf");
 }
