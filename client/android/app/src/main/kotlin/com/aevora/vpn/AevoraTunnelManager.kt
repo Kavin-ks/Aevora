@@ -50,10 +50,25 @@ class AevoraTunnelManager(context: Context, controlUrl: String) {
         return conn.serverName
     }
 
+    /**
+     * Directly parses a WireGuard config string and brings up the tunnel via GoBackend,
+     * bypassing the control plane / core client.
+     */
+    fun connectDirect(configText: String): String {
+        val config = Config.parse(BufferedReader(StringReader(configText)))
+        backend.setState(tunnel, Tunnel.State.UP, config)
+        return "Direct Connection"
+    }
+
     /** Tears the tunnel down and releases the lease. */
     fun disconnect() {
         backend.setState(tunnel, Tunnel.State.DOWN, null)
         client.disconnect()
+    }
+
+    /** Disconnects the direct GoBackend tunnel. */
+    fun disconnectDirect() {
+        backend.setState(tunnel, Tunnel.State.DOWN, null)
     }
 
     fun keepAlive() = client.keepAlive()
@@ -71,6 +86,17 @@ class AevoraTunnelManager(context: Context, controlUrl: String) {
             stats.peer(key)?.let { rx += it.rxBytes; tx += it.txBytes }
         }
         return client.reportTunnelStats(rx.toULong(), tx.toULong(), null)
+    }
+
+    /** Returns cumulative byte counters directly from GoBackend (for Direct Mode stats). */
+    fun reportDirectStats(): Pair<Long, Long> {
+        val stats = backend.getStatistics(tunnel)
+        var rx = 0L
+        var tx = 0L
+        for (key in stats.peers()) {
+            stats.peer(key)?.let { rx += it.rxBytes; tx += it.txBytes }
+        }
+        return Pair(rx, tx)
     }
 
     companion object {

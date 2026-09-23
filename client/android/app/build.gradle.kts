@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.aevora.vpn"
-        minSdk = 26
+        minSdk = 33
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
@@ -55,7 +55,6 @@ dependencies {
 
     // Encrypted storage backed by the Android Keystore.
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
-
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }

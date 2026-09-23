@@ -34,10 +34,25 @@ fun AevoraApp(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Aevora", fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 Text("•", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = AevoraTeal)
+                if (state.isDirectMode) {
+                    Spacer(Modifier.width(10.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(
+                            "DIRECT MODE",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
             }
             Spacer(Modifier.height(16.dp))
 
-            if (state.phase == Phase.NeedsEnrollment) {
+            if (!state.isDirectMode && state.phase == Phase.NeedsEnrollment) {
                 EnrollScreen(onEnroll)
             } else {
                 MainScreen(state, onSelect, onConnect, onDisconnect, onRefresh)
@@ -79,8 +94,10 @@ private fun MainScreen(
     onDisconnect: () -> Unit,
     onRefresh: () -> Unit,
 ) {
-    WorldMap(state.locations, state.selectedCountry, onSelect)
-    Spacer(Modifier.height(14.dp))
+    if (!state.isDirectMode) {
+        WorldMap(state.locations, state.selectedCountry, onSelect)
+        Spacer(Modifier.height(14.dp))
+    }
 
     // Control panel.
     Surface(
@@ -100,13 +117,19 @@ private fun MainScreen(
             )
             Text(
                 if (state.phase == Phase.Connected) state.serverName
+                else if (state.isDirectMode) "Bundled direct.conf"
                 else (state.selectedCountryName ?: "Select a location"),
                 style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                "Public IP: ${state.publicIp}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             val connected = state.phase == Phase.Connected || state.phase == Phase.Connecting
             Button(
                 onClick = { if (connected) onDisconnect() else onConnect() },
-                enabled = connected || state.selectedCountry != null,
+                enabled = state.isDirectMode || connected || state.selectedCountry != null,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (state.phase == Phase.Connected) MaterialTheme.colorScheme.error else AevoraTeal
                 ),
@@ -124,23 +147,25 @@ private fun MainScreen(
         }
     }
 
-    Spacer(Modifier.height(10.dp))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Locations", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-        IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh") }
-    }
-    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
-        items(state.locations) { loc ->
-            ListItem(
-                headlineContent = { Text(loc.country) },
-                trailingContent = {
-                    if (loc.available) {
-                        TextButton(onClick = { onSelect(loc.code) }) {
-                            Text(if (state.selectedCountry == loc.code) "Selected" else "Select")
-                        }
-                    } else Text("unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                },
-            )
+    if (!state.isDirectMode) {
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Locations", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh") }
+        }
+        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 220.dp)) {
+            items(state.locations) { loc ->
+                ListItem(
+                    headlineContent = { Text(loc.country) },
+                    trailingContent = {
+                        if (loc.available) {
+                            TextButton(onClick = { onSelect(loc.code) }) {
+                                Text(if (state.selectedCountry == loc.code) "Selected" else "Select")
+                            }
+                        } else Text("unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    },
+                )
+            }
         }
     }
 }
